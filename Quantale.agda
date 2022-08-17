@@ -90,10 +90,13 @@ module Exponentials {c a b} (Q : Quantale c a b) where
 
   open import Agda.Builtin.Sigma
 
-  _⇀_ : Carrier → Carrier → Carrier
-  p ⇀ q = hasSups.s (sups {Σ Carrier (λ x → p * x ≤ q)} {λ {(x , _ ) → x}})
+  _⇀_ : (p : Carrier) → (q : Carrier) → hasSups c b (Σ Carrier (λ x → p * x ≤ q)) Carrier _≤_ (λ ( x , _ ) → x)
+  p ⇀ q = sups {Σ Carrier (λ x → p * x ≤ q)} {λ {(x , _ ) → x}}
 
   -- adjunction properties
-  adjunction : {x y z : Carrier} → y * x ≤ z → x ≤ y ⇀ z
-  adjunction {x} {y} {z} y*x≤z = hasSups.isUB yoink ( x , y*x≤z)
-    where yoink = sups {Σ Carrier (λ x → y * x ≤ z)} {λ {(x , _ ) → x}}
+  adjunctionTo : {x y z : Carrier} → y * x ≤ z → x ≤ hasSups.s (y ⇀ z)
+  adjunctionTo {x} {y} {z} y*x≤z = hasSups.isUB yoink ( x , y*x≤z)
+   where yoink = sups {Σ Carrier (λ x → y * x ≤ z)} {λ {(x , _ ) → x}}
+
+  adjunctionFrom : {x y z : Carrier} → x ≤ hasSups.s (y ⇀ z) → y * x ≤ z
+  adjunctionFrom {x} {y} {z} = λ x≤[y,z] → {!!}
