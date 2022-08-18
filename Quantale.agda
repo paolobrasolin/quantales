@@ -50,6 +50,7 @@ record Quantale c ℓ ℓ' : Set (suc (c ⊔ ℓ ⊔ ℓ')) where
     distrʳ        : (I : Set (c ⊔ ℓ')) (y : I → Carrier) (x : Carrier) → (hasSups.s (sups {I} {y})) * x ≈ hasSups.s (sups {I} {λ i → (y i) * x})
   open IsSemigroup isSemigroup public
 
+
 module Minima {c a b} (Q : Quantale c a b) where
 
   open module zap = Quantale Q
@@ -84,11 +85,45 @@ module Minima {c a b} (Q : Quantale c a b) where
 
 open Minima
 
+module _ {c a b} (Q : Quantale c a b) where
+
+  open module zup = Quantale Q
+
+  open import Agda.Builtin.Sigma
+  -- open import Agda.Builtin.Unit
+  open import Relation.Binary.Reasoning.PartialOrder (record { Carrier =  Carrier ; _≈_ = _≈_ ; _≤_ = _≤_ ; isPartialOrder = isPartialOrder })
+
+  sup-functor : {I : Set (c ⊔ b)} {f g : I → Carrier} → (∀ {i : I} → f i ≤ g i) → (hasSups.s (sups {I} {f})) ≤ (hasSups.s (sups {I} {g}))
+  sup-functor {I} {f} {g} fi≤gi = begin hasSups.s (sups {I} {f}) ≤⟨ hasSups.isLUB sups (hasSups.s (sups {I} {g})) (λ t → clop) ⟩
+                                      hasSups.s (sups {I} {g}) ∎
+                                      where clop : {t : I} → f t ≤ hasSups.s (sups {I} {g})
+                                            clop {t} = begin f t ≤⟨ fi≤gi ⟩ g t ≤⟨ hasSups.isUB sups t ⟩ hasSups.s (sups) ∎
+
+
+  data ⊤ : Set (c ⊔ b) where
+    ● : ⊤
+
+  sup⊤ : ∀ {f : ⊤ → Carrier} → hasSups.s (sups {⊤} {f}) ≈ f ●
+  sup⊤ {f} = antisym dis dat
+    where dis : hasSups.s sups ≤ f ●
+          dis = hasSups.isLUB sups (f ●) (λ { ● → IsPartialOrder.refl isPartialOrder})
+          dat : f ● ≤ hasSups.s sups
+          dat = hasSups.isUB sups ●
+  postulate
+    *-congˡ : (x y z : Carrier) → y ≤ z → x * y ≤ x * z
+  {- TODO: probably provable?
+  *-congˡ x y z y≤z = begin x * y ≈˘⟨ {! !} ⟩
+                            hasSups.s (sups {⊤} {λ ● → x * y}) ≈⟨ {!!} ⟩
+                            x * hasSups.s (sups {⊤} {λ ● → y}) ≤⟨ {!!} ⟩
+                            x * hasSups.s (sups {⊤} {λ ● → z}) ≈⟨ {!!} ⟩
+                            x * z ∎
+  -}
 module Exponentials {c a b} (Q : Quantale c a b) where
 
   open module zop = Quantale Q
 
   open import Agda.Builtin.Sigma
+  open import Relation.Binary.Reasoning.PartialOrder (record { Carrier =  Carrier ; _≈_ = _≈_ ; _≤_ = _≤_ ; isPartialOrder = isPartialOrder })
 
   _⇀_ : (p : Carrier) → (q : Carrier) → hasSups c b (Σ Carrier (λ x → p * x ≤ q)) Carrier _≤_ (λ ( x , _ ) → x)
   p ⇀ q = sups {Σ Carrier (λ x → p * x ≤ q)} {λ {(x , _ ) → x}}
@@ -96,7 +131,19 @@ module Exponentials {c a b} (Q : Quantale c a b) where
   -- adjunction properties
   adjunctionTo : {x y z : Carrier} → y * x ≤ z → x ≤ hasSups.s (y ⇀ z)
   adjunctionTo {x} {y} {z} y*x≤z = hasSups.isUB yoink ( x , y*x≤z)
-   where yoink = sups {Σ Carrier (λ x → y * x ≤ z)} {λ {(x , _ ) → x}}
+    where yoink = sups {Σ Carrier (λ x → y * x ≤ z)} {λ {(x , _ ) → x}}
 
+  counit-lemma : {x y : Carrier} → x * hasSups.s (x ⇀ y) ≤ y
+  counit-lemma {x} {y} = begin (x * hasSups.s (x ⇀ y)) ≈⟨ distrˡ (Σ Carrier (λ t → x * t ≤ y)) ( λ {( x , _ ) → x}) x ⟩
+                               hasSups.s (sups {Σ Carrier (λ t → x * t ≤ y)} {λ {(t , _ ) → x * t}})
+                                 ≤⟨ hasSups.isLUB sups y (λ { ( _ , proof) → proof}) ⟩
+                               y ∎
+  {- 
+  x * (sup { a | x * a ≤ y}) ≈ < distr >
+  sup { x * a | x * a ≤ y } ≤  < isLUB >
+  y
+  -}
   adjunctionFrom : {x y z : Carrier} → x ≤ hasSups.s (y ⇀ z) → y * x ≤ z
-  adjunctionFrom {x} {y} {z} = λ x≤[y,z] → {!!}
+  adjunctionFrom {x} {y} {z} = λ x≤[y,z] →  begin y * x ≤⟨ *-congˡ Q y x (hasSups.s (y ⇀ z)) x≤[y,z] ⟩
+                                                  y * hasSups.s (y ⇀ z) ≤⟨ counit-lemma ⟩
+                                                  z ∎
