@@ -131,6 +131,7 @@ module Exponentials {c a b} (Q : Quantale c a b) where
   -- TODO: that record is very verbose; is there a better way?
   postulate
     *-congˡ : (x y z : Carrier) → y ≤ z → x * y ≤ x * z
+    *-congʳ : (x y z : Carrier) → y ≤ z → y * x ≤ z * x
   -- TODO: probably provable?
 
   -- left internal hom
@@ -145,21 +146,51 @@ module Exponentials {c a b} (Q : Quantale c a b) where
   p ↼ q = sups {supfun p q} {λ {(x , _ ) → x}}
     where supfun = λ p q → Σ Carrier (λ t → t * p ≤ q)
 
-  -- adjunction properties
+  -- -- -- adjunction properties, left hom
   adjunctionToˡ : {x y z : Carrier} → y * x ≤ z → x ≤ s (y ⇀ z)
   adjunctionToˡ {x} {y} {z} y*x≤z = isUB adjsup ( x , y*x≤z )
     where adjsup = sups {Σ Carrier (λ x → y * x ≤ z)} {λ {(x , _ ) → x}}
 
-  counit-lemma : {x y : Carrier} → x * s (x ⇀ y) ≤ y
-  counit-lemma {x} {y} =
-    begin (x * s (x ⇀ y))                          ≈⟨ distrˡ supfun ( λ {( x , _ ) → x}) x ⟩
+  counit-lemmaˡ : {x y : Carrier} → x * s (x ⇀ y) ≤ y
+  counit-lemmaˡ {x} {y} =
+    begin (x * s (x ⇀ y))                          ≈⟨ distrˡ supfun (λ {( x , _ ) → x}) x ⟩
           s (sups {supfun} {λ {(t , _ ) → x * t}}) ≤⟨ isLUB sups y (λ { ( _ , proof) → proof}) ⟩
-          y                                                ∎
+          y                                        ∎
     where supfun = Σ Carrier (λ t → x * t ≤ y)
+
+  unit-lemmaˡ : {x y : Carrier} → y ≤ s (x ⇀ (x * y))
+  unit-lemmaˡ {x} {y} = begin y               ≤⟨ plep ⟩
+                              s (x ⇀ (x * y)) ∎
+    where supfun = Σ Carrier (λ t → x * t ≤ x * y)
+          plep = isUB (sups {supfun} {λ {(fst , _ ) → fst}}) (y , IsPartialOrder.refl isPartialOrder)
+
   adjunctionFromˡ : {x y z : Carrier} → x ≤ s (y ⇀ z) → y * x ≤ z
   adjunctionFromˡ {x} {y} {z} x≤[y,z] =
     begin y * x         ≤⟨ *-congˡ y x (s (y ⇀ z)) x≤[y,z] ⟩
-          y * s (y ⇀ z) ≤⟨ counit-lemma ⟩
-          z                     ∎
+          y * s (y ⇀ z) ≤⟨ counit-lemmaˡ ⟩
+          z             ∎
 
-  -- TODO: add adjunctionToʳ and adjunctionFromʳ
+  -- -- -- adjunction properties, right hom
+  adjunctionToʳ : {x y z : Carrier} → x * y ≤ z → x ≤ s (y ↼ z)
+  adjunctionToʳ {x} {y} {z} y*x≤z = isUB adjsup ( x , y*x≤z )
+    where adjsup = sups {Σ Carrier (λ x → x * y ≤ z)} {λ {(x , _ ) → x}}
+
+  counit-lemmaʳ : {x y : Carrier} → s (x ↼ y) * x ≤ y
+  counit-lemmaʳ {x} {y} =
+    begin s (x ↼ y) * x ≈⟨ distrʳ supfun (λ { (x , _) → x }) x ⟩
+          s (sups {supfun} {λ {(t , _ ) → t * x}}) ≤⟨ isLUB sups y (λ { ( _ , proof) → proof}) ⟩
+          y                                        ∎
+    where supfun = Σ Carrier (λ t → t * x ≤ y)
+
+  unit-lemmaʳ : {x y : Carrier} → y ≤ s (x ↼ (y * x))
+  unit-lemmaʳ {x} {y} = begin y               ≤⟨ plep ⟩
+                              s (x ↼ (y * x)) ∎
+    where supfun = Σ Carrier (λ t → t * x ≤ y * x)
+          plep = isUB (sups {supfun} {λ {(fst , _ ) → fst}}) (y , IsPartialOrder.refl isPartialOrder)
+
+
+  adjunctionFromʳ : {x y z : Carrier} → x ≤ s (y ↼ z) → x * y ≤ z
+  adjunctionFromʳ {x} {y} {z} x≤[y,z] =
+    begin x * y         ≤⟨ *-congʳ y x (s (y ↼ z)) x≤[y,z] ⟩
+          s (y ↼ z) * y ≤⟨ counit-lemmaʳ ⟩
+          z             ∎
