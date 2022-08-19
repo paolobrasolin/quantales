@@ -36,8 +36,8 @@ record IsCompleteJSL {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ 
     isPartialOrder : IsPartialOrder _≈_ _≤_
     sup            : ∀ Carrier → Sup {c ⊔ ℓ ⊔ e} Carrier
 
-  ∪ : ∀ P → Carrier
-  ∪ P = s (sup P)
+  ⋁ : ∀ P → Carrier
+  ⋁ P = s (sup P)
 
   open IsPartialOrder isPartialOrder public
 
@@ -67,8 +67,8 @@ record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
   open IsSemigroup isSemigroup     public renaming (refl to refl≈; trans to trans≈)
 
   field
-    distrˡ        : ∀ P x → x * ∪ P ≈ ∪ (λ i → ∃[ p ] (P p × i ≈ x * p))
-    distrʳ        : ∀ P x → ∪ P * x ≈ ∪ (λ i → ∃[ p ] (P p × i ≈ p * x))
+    distrˡ        : ∀ P x → x * ⋁ P ≈ ⋁ (λ i → ∃[ p ] (P p × i ≈ x * p))
+    distrʳ        : ∀ P x → ⋁ P * x ≈ ⋁ (λ i → ∃[ p ] (P p × i ≈ p * x))
 
 {-
 module Minima {c a b} (Q : Quantale c a b) where
@@ -86,7 +86,7 @@ module Minima {c a b} (Q : Quantale c a b) where
     ⊥-initial : {A : Set c} {f : (∅ {c ⊔ b}) → A} → f ≡ ∅-elim
 
   ⊥ : Carrier
-  ⊥ = ∪ ∅ ∅-elim
+  ⊥ = ⋁ ∅ ∅-elim
 
   ⊥-min : Minimum _≤_ ⊥
   ⊥-min = λ t → isLUB (sup ∅ ∅-elim) t ∅-elim
@@ -105,7 +105,7 @@ module Minima {c a b} (Q : Quantale c a b) where
       ⊥     : Carrier
       isMin : ∀ {t : Carrier} → ⊥ ≤ t
 
-    { bot = ∪ ∅ ∅-elim
+    { bot = ⋁ ∅ ∅-elim
     ; isMin = λ {t} → isLUB (sup ∅ ∅-elim) t ∅-elim
     }
 
@@ -114,10 +114,10 @@ module Minima {c a b} (Q : Quantale c a b) where
   ⊥-absorbsˡ : ∀ (x : Carrier) → x * min.bot ≈ min.bot
   ⊥-absorbsˡ x =
     begin x * min.bot       ≈⟨ distrˡ ⊥ ⊥-elim x ⟩
-          ∪ ⊥ ((x *_) ∘ ⊥-elim) ≈⟨ {!   !} ⟩
-          ∪ ⊥ ⊥-elim            ≈⟨ {!   !} ⟩
+          ⋁ ⊥ ((x *_) ∘ ⊥-elim) ≈⟨ {!   !} ⟩
+          ⋁ ⊥ ⊥-elim            ≈⟨ {!   !} ⟩
           min.bot           ∎
-    where pof = Eq.cong (λ t → (∪ ⊥ t)) ⊥-initial
+    where pof = Eq.cong (λ t → (⋁ ⊥ t)) ⊥-initial
           open de min
           open import Relation.Binary.Reasoning.Setoid setoid
 
@@ -133,12 +133,12 @@ module _ {c a b} (Q : Quantale c a b) where
     ● : ⊤
 
 
-  sup⊤ : ∀ {f : ⊤ → Carrier} → (∪ ⊤ f) ≈ f ●
+  sup⊤ : ∀ {f : ⊤ → Carrier} → (⋁ ⊤ f) ≈ f ●
   sup⊤ {f} = antisym dis dat
-    where dis : (∪ _ _) ≤ f ●
-          dis = isLUB ∪ (f ●) (λ { ● → IsPartialOrder.refl isPartialOrder})
-          dat : f ● ≤ s ∪
-          dat = isUB ∪ ●
+    where dis : (⋁ _ _) ≤ f ●
+          dis = isLUB ⋁ (f ●) (λ { ● → IsPartialOrder.refl isPartialOrder})
+          dat : f ● ≤ s ⋁
+          dat = isUB ⋁ ●
 -}
 
 module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
@@ -180,11 +180,11 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
   -- left internal hom
   _⇀_ : Carrier → Carrier → Carrier
-  p ⇀ q = ∪ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
+  p ⇀ q = ⋁ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
 
   -- right internal hom
   _↼_ : Carrier → Carrier → Carrier
-  p ↼ q = ∪ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
+  p ↼ q = ⋁ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
 
   -- left internal hom
   _⇀ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
@@ -198,7 +198,7 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   counit-lemmaˡ : ∀ {x y} → x * (x ⇀ y) ≤ y
   counit-lemmaˡ {x} {y} =
     begin x * (x ⇀ y) ≈⟨ distrˡ _ x ⟩
-          ∪ _         ≤⟨ isLUB (sup _) y (λ { t (o , lift k , e) → ≤-respˡ-≈ (sym e) k }) ⟩
+          ⋁ _         ≤⟨ isLUB (sup _) y (λ { t (o , lift k , e) → ≤-respˡ-≈ (sym e) k }) ⟩
           y           ∎
 
   unit-lemmaˡ : ∀ {x y} → y ≤ (x ⇀ (x * y))
@@ -234,7 +234,7 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   counit-lemmaʳ : {x y : Carrier} → (x ↼ y) * x ≤ y
   counit-lemmaʳ {x} {y} =
     begin (x ↼ y) * x          ≈⟨ distrʳ _ proj₁ x ⟩
-          ∪ _ ((_* x) ∘ proj₁) ≤⟨ isLUB (sup _ _) y proj₂ ⟩
+          ⋁ _ ((_* x) ∘ proj₁) ≤⟨ isLUB (sup _ _) y proj₂ ⟩
           y                    ∎
 
   unit-lemmaʳ : {x y : Carrier} → y ≤ (x ⇀ (x * y))
@@ -253,44 +253,44 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
   sup-functor : {I : Set (c ⊔ b)} {f g : I → Carrier}
               → (∀ {i : I} → f i ≤ g i)
-              → ((∪ I f))
-              ≤ ((∪ I g))
-  sup-functor {I} {f} {g} fi≤gi = begin (∪ I f) ≤⟨ {!  !} ⟩ --isLUB (∪ _ _) ((∪ I g)) (λ t → clop) ⟩
-                                      (∪ I g) ∎
-                                      where clop : {t : I} → f t ≤ (∪ I g)
-                                            clop {t} = begin f t ≤⟨ fi≤gi ⟩ g t ≤⟨ {!   !} ⟩ {!   !} ∎ --isUB (∪ _ _) t ⟩ (∪ _ _) ∎
+              → ((⋁ I f))
+              ≤ ((⋁ I g))
+  sup-functor {I} {f} {g} fi≤gi = begin (⋁ I f) ≤⟨ {!  !} ⟩ --isLUB (⋁ _ _) ((⋁ I g)) (λ t → clop) ⟩
+                                      (⋁ I g) ∎
+                                      where clop : {t : I} → f t ≤ (⋁ I g)
+                                            clop {t} = begin f t ≤⟨ fi≤gi ⟩ g t ≤⟨ {!   !} ⟩ {!   !} ∎ --isUB (⋁ _ _) t ⟩ (⋁ _ _) ∎
 
   lemma-cong : ∀ {A : Set (c ⊔ b)} {P Q : A → Carrier}
              → (∀ x → P x ≈ Q x)
-             → (∪ A P)
-             ≈ (∪ A Q)
+             → (⋁ A P)
+             ≈ (⋁ A Q)
   lemma-cong {A} {P} {Q} e = antisym l r
     where
       open import Relation.Binary.Reasoning.Setoid setoid
-      l : (∪ A P) ≤ (∪ A Q)
-      l = {!   !} --isLUB (∪ A P) ((∪ A Q)) λ i → trans< (≤-respˡ-≈ (sym (e i)) refl≤) (isUB (∪ A Q) i)
-      r : (∪ A Q) ≤ (∪ A P)
-      r = {!   !} --isLUB (∪ A Q) ((∪ A P)) λ i → trans< (≤-respˡ-≈ ((e i)) refl≤) (isUB (∪ A P) i)
+      l : (⋁ A P) ≤ (⋁ A Q)
+      l = {!   !} --isLUB (⋁ A P) ((⋁ A Q)) λ i → trans< (≤-respˡ-≈ (sym (e i)) refl≤) (isUB (⋁ A Q) i)
+      r : (⋁ A Q) ≤ (⋁ A P)
+      r = {!   !} --isLUB (⋁ A Q) ((⋁ A P)) λ i → trans< (≤-respˡ-≈ ((e i)) refl≤) (isUB (⋁ A P) i)
 
   lemma-cong-sigma1 : ∀ {A} {B} {i} {j}
              → ((A → B))
-             → (∪ A i)
-             ≤ (∪ B j)
+             → (⋁ A i)
+             ≤ (⋁ B j)
   lemma-cong-sigma1 {A} {B} e = yonedino λ z x → {!   !}
 
 
   lemma-impl : ∀ {A} {B}
              → (∀ x → (A x → B x) × (B x → A x))
              → Sup c b A
-             → ∪ (Σ Carrier B) proj₁
+             → ⋁ (Σ Carrier B) proj₁
   lemma-impl {A} {B} e = ?
 
   lemma-cong-sigma : ∀ {A} {B}
              → (∀ x → (A x → B x) × (B x → A x))
-             → (∪ (Σ Carrier A) proj₁)
-             ≈ (∪ (Σ Carrier B) proj₁)
+             → (⋁ (Σ Carrier A) proj₁)
+             ≈ (⋁ (Σ Carrier B) proj₁)
   lemma-cong-sigma {A} {B} e =
-    yoneda λ w → (λ w≤ → isUB (∪ {!   !} proj₁) (w , {!   !})) , {!   !}
+    yoneda λ w → (λ w≤ → isUB (⋁ {!   !} proj₁) (w , {!   !})) , {!   !}
 
 
 -}
@@ -298,12 +298,12 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
 
 --    yoneda λ w →
---      (λ w≤ → isUB (∪ (supfun (x * y) z) proj₁)
+--      (λ w≤ → isUB (⋁ (supfun (x * y) z) proj₁)
 --                   (w , adjunctionFromˡ (trans< w≤ (trans< {!   !} {!   !})))) ,
 --      {!   !}
 --
---     w ≤ (∪ (Σ Carrier (λ t → (x * y) * t ≤ z)) fst)
---w≤ : w ≤ (∪ (Σ Carrier (λ t →       y * t  ≤ s (x ⇀ z)))  fst)
+--     w ≤ (⋁ (Σ Carrier (λ t → (x * y) * t ≤ z)) fst)
+--w≤ : w ≤ (⋁ (Σ Carrier (λ t →       y * t  ≤ s (x ⇀ z)))  fst)
 
 
 {-
@@ -316,15 +316,15 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
 
     seppia : (i : supfun y (s (x ⇀ z))) → fst i ≤ s ((x * y) ⇀ z)
-    seppia (t , y*t≤[x,z]) = let r = adjunctionFromˡ (isUB (∪ _ _) ({!   !} , {!   !})) in {!   !}
+    seppia (t , y*t≤[x,z]) = let r = adjunctionFromˡ (isUB (⋁ _ _) ({!   !} , {!   !})) in {!   !}
 
 
-    --adjunctionToˡ (isUB (∪ {supfun (x * y) z} {λ { (c , p) → {!   !} }}) {!   !})
-    -- isUB (∪ {supfun {!   !} z} {proj₁}) (t , (adjunctionFromˡ (isUB ∪ {!   !})))
+    --adjunctionToˡ (isUB (⋁ {supfun (x * y) z} {λ { (c , p) → {!   !} }}) {!   !})
+    -- isUB (⋁ {supfun {!   !} z} {proj₁}) (t , (adjunctionFromˡ (isUB ⋁ {!   !})))
 
     dis : s (y ⇀ s (x ⇀ z)) ≤ s ((x * y) ⇀ z)
     dis = {!   !}
-    --isLUB (∪ (supfun y (s (x ⇀ z))) proj₁) (s ((x * y) ⇀ z)) seppia
+    --isLUB (⋁ (supfun y (s (x ⇀ z))) proj₁) (s ((x * y) ⇀ z)) seppia
 
     dat : s ((x * y) ⇀ z) ≤ s (y ⇀ s (x ⇀ z))
     dat = {!  !}
