@@ -9,16 +9,18 @@ open import Algebra.Structures
 open import Level using (Level; suc; _⊔_)
 open import Relation.Binary using (Rel; IsPartialOrder; IsEquivalence; Minimum)
 open import Data.Product
+open import Data.Sum
 open import Level using (Lift; lift)
 open import Function using (_∘_)
 open import Data.Empty.Polymorphic using ()
-open import Relation.Binary.PropositionalEquality as Eq using (_≡_; subst₂)
+open import Relation.Binary.Reasoning.Setoid using ()
+open import Relation.Binary.PropositionalEquality using (_≡_; subst₂)
 
 module Sup-Poset {c ℓ} (Carrier : Set c) (_≤_ : Rel Carrier ℓ) where
 
-  record Sup {k} (P : Carrier → Set k) : (Set (suc (c ⊔ ℓ ⊔ k))) where
+  record Sup {e} (P : Carrier → Set (c ⊔ ℓ ⊔ e)) : (Set (suc (c ⊔ ℓ ⊔ e))) where
 
-    _isUpperBound : Carrier → Set (c ⊔ ℓ ⊔ k)
+    _isUpperBound : Carrier → Set (c ⊔ ℓ ⊔ e)
     s isUpperBound = ∀ x → P x → x ≤ s
 
     field
@@ -34,7 +36,7 @@ record IsCompleteJSL {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ 
   open Sup-Poset Carrier _≤_ public
   field
     isPartialOrder : IsPartialOrder _≈_ _≤_
-    sup            : ∀ Carrier → Sup {c ⊔ ℓ ⊔ e} Carrier
+    sup            : ∀ Carrier → Sup {e = e} Carrier
 
   ⋁ : ∀ P → Carrier
   ⋁ P = s (sup P)
@@ -50,6 +52,7 @@ record CompleteJSL c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
     isCompleteJSL : IsCompleteJSL _≈_ _≤_
   open IsCompleteJSL isCompleteJSL public
 
+
 record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
   infix 4 _≈_ _≤_
   infix 5 _*_
@@ -63,12 +66,16 @@ record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
     _*_           : Op₂ Carrier
     isSemigroup   : IsSemigroup _≈_ _*_
 
-  open IsCompleteJSL isCompleteJSL public renaming (refl to refl≤; trans to trans<) hiding (reflexive; isEquivalence)
+  open IsCompleteJSL isCompleteJSL public renaming (refl to refl≤; trans to trans≤) hiding (reflexive; isEquivalence)
   open IsSemigroup isSemigroup     public renaming (refl to refl≈; trans to trans≈)
 
+  -- generic action on the elements identified by a predicate
+  P-op : (f : Carrier → Carrier) → (Carrier → Set (c ⊔ ℓ ⊔ e)) → (Carrier → Set (c ⊔ ℓ ⊔ e))
+  P-op f P = (λ i → ∃[ p ] (P p × i ≈ f p))
+
   field
-    distrˡ        : ∀ P x → x * ⋁ P ≈ ⋁ (λ i → ∃[ p ] (P p × i ≈ x * p))
-    distrʳ        : ∀ P x → ⋁ P * x ≈ ⋁ (λ i → ∃[ p ] (P p × i ≈ p * x))
+    distrˡ        : ∀ P x → x * (⋁ P) ≈ ⋁ (P-op (x *_) P)
+    distrʳ        : ∀ P x → (⋁ P) * x ≈ ⋁ (P-op (_* x) P)
 
 {-
 module Minima {c a b} (Q : Quantale c a b) where
@@ -143,21 +150,11 @@ module _ {c a b} (Q : Quantale c a b) where
 
 module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
-  open module zop = Quantale Q
+  open Quantale Q
 
   open import Agda.Builtin.Sigma
-  open import Relation.Binary.Reasoning.PartialOrder
-    (record { Carrier =  Carrier
-            ; _≈_ = _≈_
-            ; _≤_ = _≤_
-            ; isPartialOrder = isPartialOrder
-            })
   -- TODO: import different reasonings locally to avoid clash
   -- TODO: that record is very verbose; is there a better way?
-  postulate
-   -- *-congˡ : (x y z : Carrier) → y ≤ z → x * y ≤ x * z
-    *-congʳ : ∀ {x y z} → y ≤ z → y * x ≤ z * x
-  -- TODO: probably provable? Yes, provable.
 
 
   yonedino′ : {x y z : Carrier}
@@ -170,13 +167,86 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
          → x ≤ y
   yonedino {x} {y} {z} f = f x refl≤
 
-  yoneda : {x y z : Carrier}
+  yoneda : {x y : Carrier}
          → (∀ z → ((z ≤ x) → (z ≤ y)) × ((z ≤ y) → (z ≤ x)))
          → x ≈ y
-  yoneda {x} {y} {z} f = antisym (proj₁ (f x) refl≤) (proj₂ (f y) refl≤)
+  yoneda {x} {y} f = antisym (proj₁ (f x) refl≤) (proj₂ (f y) refl≤)
 
-  *-congˡ : ∀ {x y z} → y ≤ z → x * y ≤ x * z
-  *-congˡ {x} {y} {z} y≤z = {!  !}
+  ∨-predicate : Carrier → Carrier → Carrier → Set (c ⊔ ℓ ⊔ e)
+  ∨-predicate a b = (λ p → Level.Lift (c ⊔ ℓ ⊔ e) ((a ≈ p) ⊎ (b ≈ p)))
+
+  _∨_ : Carrier → Carrier → Carrier
+  a ∨ b = ⋁ (∨-predicate a b)
+
+  _∨ₛ_ : (a : Carrier) → (b : Carrier) → Sup (∨-predicate a b)
+  a ∨ₛ b = sup (∨-predicate a b)
+
+  ≤→a∨b≈b : ∀ {a} {b}
+          → a ≤ b
+          → a ∨ b ≈ b
+  ≤→a∨b≈b {a} {b} a≤b =
+    antisym (isLUB (a ∨ₛ b) b λ { x (lift (inj₁ a≈x)) → ≤-respˡ-≈ a≈x a≤b
+                                ; x (lift (inj₂ b≈x)) → ≤-respˡ-≈ b≈x refl≤ })
+            (isUB (a ∨ₛ b) b (lift (inj₂ refl≈)))
+
+  a∨b≈b→≤ : ∀ {a} {b}
+          → a ∨ b ≈ b
+          → a ≤ b
+  a∨b≈b→≤ {a} {b} a∨b≈b = ≤-respʳ-≈ a∨b≈b (isUB (a ∨ₛ b) a (lift (inj₁ refl≈)))
+
+  sup-ext : ∀ {f} {g}
+              → (∀ i → (f i → g i))
+              → (⋁ f) ≤ (⋁ g)
+  sup-ext {f} {g} fi→gi = isLUB (sup f) (⋁ g) λ x fx → isUB (sup g) x (fi→gi x fx)
+
+  sup-extensionality : ∀ {f} {g}
+              → (∀ i → (f i → g i) × (g i → f i))
+              → (⋁ f) ≈ (⋁ g)
+  sup-extensionality {f} {g} fi⇔gi = yoneda
+    λ z → (λ z≤ → trans≤ z≤ (sup-ext (proj₁ ∘ fi⇔gi)))
+        , (λ z≤ → trans≤ z≤ (sup-ext (proj₂ ∘ fi⇔gi)))
+
+  *-congˡ : ∀ {a x y}
+          → x ≤ y
+          → a * x ≤ a * y
+  *-congˡ {a} {x} {y} x≤y =
+    let
+        convert-P-op : ((a * x) ∨ (a * y)) ≈ ⋁ (P-op (a *_) (∨-predicate x y))
+        convert-P-op = Eq.sym (sup-extensionality
+               (λ i → (λ { (t , lift (inj₁ r) , k) → lift (inj₁ (trans≈ (∙-congˡ r) (Eq.sym k)))
+                         ; (t , lift (inj₂ r) , k) → lift (inj₂ (trans≈ (∙-congˡ r) (Eq.sym k))) })
+                    , (λ { (lift (inj₁ a*x≈i)) → x , lift (inj₁ refl≈) , Eq.sym a*x≈i
+                         ; (lift (inj₂ a*y≈i)) → y , lift (inj₂ refl≈) , Eq.sym a*y≈i })))
+
+        t : (a * x) ∨ (a * y) ≈ a * y
+        t =
+          let open Relation.Binary.Reasoning.Setoid setoid in
+          begin (a * x) ∨ (a * y)                 ≈⟨ convert-P-op ⟩
+                ⋁ (P-op (a *_) (∨-predicate x y)) ≈⟨ Eq.sym (distrˡ ((∨-predicate x y)) a)  ⟩
+                a * (x ∨ y)                       ≈⟨ ∙-congˡ (≤→a∨b≈b x≤y) ⟩
+                a * y                             ∎
+        in a∨b≈b→≤ t
+
+  *-congʳ : ∀ {a x y}
+          → x ≤ y
+          → x * a ≤ y * a
+  *-congʳ {a} {x} {y} x≤y =
+    let
+        convert-P-op : ((x * a) ∨ (y * a)) ≈ ⋁ (P-op (_* a) (∨-predicate x y))
+        convert-P-op = Eq.sym (sup-extensionality
+               (λ i → (λ { (t , lift (inj₁ r) , k) → lift (inj₁ (trans≈ (∙-congʳ r) (Eq.sym k)))
+                         ; (t , lift (inj₂ r) , k) → lift (inj₂ (trans≈ (∙-congʳ r) (Eq.sym k))) })
+                    , (λ { (lift (inj₁ a*x≈i)) → x , lift (inj₁ refl≈) , Eq.sym a*x≈i
+                         ; (lift (inj₂ a*y≈i)) → y , lift (inj₂ refl≈) , Eq.sym a*y≈i })))
+
+        t : (x * a) ∨ (y * a) ≈ y * a
+        t =
+          let open Relation.Binary.Reasoning.Setoid setoid in
+          begin (x * a) ∨ (y * a)                 ≈⟨ convert-P-op ⟩
+                ⋁ (P-op (_* a) (∨-predicate x y)) ≈⟨ Eq.sym (distrʳ ((∨-predicate x y)) a)  ⟩
+                (x ∨ y) * a                       ≈⟨ ∙-congʳ (≤→a∨b≈b x≤y) ⟩
+                y * a                             ∎
+        in a∨b≈b→≤ t
 
   -- left internal hom
   _⇀_ : Carrier → Carrier → Carrier
@@ -194,6 +264,13 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   _↼ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
   p ↼ₛ q = sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
 
+  open import Relation.Binary.Reasoning.PartialOrder
+    (record { Carrier =  Carrier
+            ; _≈_ = _≈_
+            ; _≤_ = _≤_
+            ; isPartialOrder = isPartialOrder
+            })
+
   -- adjunction properties, left hom
   counit-lemmaˡ : ∀ {x y} → x * (x ⇀ y) ≤ y
   counit-lemmaˡ {x} {y} =
@@ -201,6 +278,13 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
           ⋁ _         ≤⟨ isLUB (sup _) y (λ { t (o , lift k , e) → ≤-respˡ-≈ (sym e) k }) ⟩
           y           ∎
 
+  -- adjunction properties, left hom
+  counit-lemmaʳ : {x y : Carrier} → (x ↼ y) * x ≤ y
+  counit-lemmaʳ {x} {y} = {!   !}
+--    begin (x ↼ y) * x          ≈⟨ distrʳ _ y ⟩
+--          ⋁ _          ≤⟨ ? ⟩
+--          y ∎
+--
   unit-lemmaˡ : ∀ {x y} → y ≤ (x ⇀ (x * y))
   unit-lemmaˡ {x} {y} =
     begin y             ≤⟨ isUB (x ⇀ₛ (x * y)) y (lift refl≤) ⟩
@@ -212,8 +296,20 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
           y * (y ⇀ z) ≤⟨ counit-lemmaˡ ⟩
           z           ∎
 
+  adjunctionFromʳ : {x y z : Carrier} → x ≤ (y ↼ z) → x * y ≤ z
+  adjunctionFromʳ {x} {y} {z} x≤[y,z] =
+    begin x * y       ≤⟨ *-congʳ x≤[y,z] ⟩
+          (y ↼ z) * y ≤⟨ counit-lemmaʳ ⟩
+          z           ∎
+
+  adjunctionToˡ : {x y z : Carrier} → y * x ≤ z → x ≤ y ⇀ z
+  adjunctionToˡ {x} {y} {z} y*x≤z = {!   !}
+
   int-adjunctionˡ : ∀ {x y z} → (y ⇀ (x ⇀ z)) ≈ ((x * y) ⇀ z)
   int-adjunctionˡ {x} {y} {z} = {!!}
+  int-adjunctionˡ {x} {y} {z} = sup-extensionality λ i →
+      (λ { (lift p) → lift (≤-respˡ-≈ (Eq.sym (assoc _ _ _)) (adjunctionFromˡ p)) })
+    , (λ { (lift p) → lift (adjunctionToˡ (≤-respˡ-≈ (assoc _ _ _) p)) })
 
   int-adjunctionʳ : ∀ {x y z} → (y ↼ (x ↼ z)) ≈ ((y * x) ⇀ z)
   int-adjunctionʳ {x} {y} {z} = {!!}
