@@ -176,7 +176,7 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   yoneda {x} {y} {z} f = antisym (proj₁ (f x) refl≤) (proj₂ (f y) refl≤)
 
   *-congˡ : ∀ {x y z} → y ≤ z → x * y ≤ x * z
-  *-congˡ y≤z = yonedino {!   !}
+  *-congˡ {x} {y} {z} y≤z = yonedino {x * y} {x * z} {z} (λ s s≤x*y → {!   !})
 
   -- left internal hom
   _⇀_ : Carrier → Carrier → Carrier
@@ -207,15 +207,10 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
           (x ⇀ (x * y)) ∎
 
   adjunctionFromˡ : ∀ {x y z} → x ≤ (y ⇀ z) → y * x ≤ z
-  adjunctionFromˡ = {!   !}
-
-{-
-  adjunctionFromˡ : {x y z : Carrier} → x ≤ (y ⇀ z) → y * x ≤ z
   adjunctionFromˡ {x} {y} {z} x≤[y,z] =
-    begin y * x       ≤⟨ {!   !} ⟩
-          {!   !}           ≤⟨ {!   !} ⟩
+    begin y * x       ≤⟨ *-congˡ x≤[y,z] ⟩
+          y * (y ⇀ z) ≤⟨ counit-lemmaˡ ⟩
           z           ∎
--}
 
   int-adjunctionˡ : ∀ {x y z} → (y ⇀ (x ⇀ z)) ≈ ((x * y) ⇀ z)
   int-adjunctionˡ {x} {y} {z} = {!   !}
