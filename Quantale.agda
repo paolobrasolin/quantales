@@ -157,7 +157,7 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   postulate
    -- *-congˡ : (x y z : Carrier) → y ≤ z → x * y ≤ x * z
     *-congʳ : ∀ {x y z} → y ≤ z → y * x ≤ z * x
-  -- TODO: probably provable?
+  -- TODO: probably provable? Yes, provable.
 
 
   yonedino′ : {x y z : Carrier}
@@ -176,7 +176,7 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   yoneda {x} {y} {z} f = antisym (proj₁ (f x) refl≤) (proj₂ (f y) refl≤)
 
   *-congˡ : ∀ {x y z} → y ≤ z → x * y ≤ x * z
-  *-congˡ {x} {y} {z} y≤z = yonedino {x * y} {x * z} {z} (λ s s≤x*y → {!   !})
+  *-congˡ {x} {y} {z} y≤z = {!  !}
 
   -- left internal hom
   _⇀_ : Carrier → Carrier → Carrier
@@ -186,11 +186,11 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   _↼_ : Carrier → Carrier → Carrier
   p ↼ q = ⋁ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
 
-  -- left internal hom
+  -- left internal hom, whole record
   _⇀ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
   p ⇀ₛ q = sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
 
-  -- right internal hom
+  -- right internal hom, whole record
   _↼ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
   p ↼ₛ q = sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
 
@@ -213,7 +213,10 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
           z           ∎
 
   int-adjunctionˡ : ∀ {x y z} → (y ⇀ (x ⇀ z)) ≈ ((x * y) ⇀ z)
-  int-adjunctionˡ {x} {y} {z} = {!   !}
+  int-adjunctionˡ {x} {y} {z} = {!!}
+
+  int-adjunctionʳ : ∀ {x y z} → (y ↼ (x ↼ z)) ≈ ((y * x) ⇀ z)
+  int-adjunctionʳ {x} {y} {z} = {!!}
 
 {-
   adjunctionToˡ : {x y z : Carrier} → y * x ≤ z → x ≤ y ⇀ z
