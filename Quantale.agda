@@ -8,21 +8,24 @@ open import Algebra.Core
 open import Algebra.Structures
 open import Level using (Level; suc; _⊔_)
 open import Relation.Binary
+open import Data.Product
 open import Data.Empty.Polymorphic
 open import Relation.Binary.PropositionalEquality as Eq using (_≡_; subst₂)
 
-record hasSups c ℓ (I : Set (c ⊔ ℓ)) (P : Set c) (_≤_ : Rel P ℓ) (f : I → P) : (Set (suc (c ⊔ ℓ))) where
+record Sups c ℓ (I : Set (c ⊔ ℓ)) (P : Set c) (_≤_ : Rel P ℓ) (f : I → P) : (Set (suc (c ⊔ ℓ))) where
   field
-    s     : P
-    isUB  : ∀ (i : I) → (f i) ≤ s
-    isLUB : (t : P) → (∀ (i : I) → f i ≤ t) → s ≤ t
+    s      : P
+    isUB   : ∀ (i : I) → (f i) ≤ s
+    isLUB  : (t : P) → (∀ (i : I) → f i ≤ t) → s ≤ t
+    -- actually it's an iff:
+    isLUB' : (t : P) → s ≤ t → (∀ (i : I) → f i ≤ t)
 
-open module S = hasSups
+open Sups public
 
 record IsCompleteJSL {c ℓ ℓ'} {A : Set c} (_≈_ : Rel A ℓ) (_≤_ : Rel A ℓ') : Set (suc (c ⊔ ℓ ⊔ ℓ')) where
   field
     isPartialOrder : IsPartialOrder _≈_ _≤_
-    sups           : ∀ {I : Set (c ⊔ ℓ')} {f : I → A} → hasSups c ℓ' I A (_≤_) f
+    sups           : ∀ {I : Set (c ⊔ ℓ')} {f : I → A} → Sups c ℓ' I A (_≤_) f
   open IsPartialOrder isPartialOrder public
 
 record CompleteJSL c ℓ ℓ' : Set (suc (c ⊔ ℓ ⊔ ℓ')) where
@@ -136,25 +139,25 @@ module Exponentials {c a b} (Q : Quantale c a b) where
 
   -- left internal hom
   _⇀_ : (p : Carrier) → (q : Carrier) →
-    hasSups c b (Σ Carrier (λ x → p * x ≤ q)) Carrier _≤_ (λ ( x , _ ) → x)
-  p ⇀ q = sups {supfun p q} {λ {(x , _ ) → x}}
+    Sups c b (Σ Carrier (λ x → p * x ≤ q)) Carrier _≤_ proj₁
+  p ⇀ q = sups {supfun p q} {proj₁}
     where supfun = λ p q → Σ Carrier (λ t → p * t ≤ q)
 
   -- right internal hom
   _↼_ : (p : Carrier) → (q : Carrier) →
-    hasSups c b (Σ Carrier (λ x → x * p ≤ q)) Carrier _≤_ (λ ( x , _ ) → x)
-  p ↼ q = sups {supfun p q} {λ {(x , _ ) → x}}
+    Sups c b (Σ Carrier (λ x → x * p ≤ q)) Carrier _≤_ proj₁
+  p ↼ q = sups {supfun p q} {proj₁}
     where supfun = λ p q → Σ Carrier (λ t → t * p ≤ q)
 
   -- -- -- adjunction properties, left hom
   adjunctionToˡ : {x y z : Carrier} → y * x ≤ z → x ≤ s (y ⇀ z)
   adjunctionToˡ {x} {y} {z} y*x≤z = isUB adjsup ( x , y*x≤z )
-    where adjsup = sups {Σ Carrier (λ x → y * x ≤ z)} {λ {(x , _ ) → x}}
+    where adjsup = sups {Σ Carrier (λ x → y * x ≤ z)} {proj₁}
 
   counit-lemmaˡ : {x y : Carrier} → x * s (x ⇀ y) ≤ y
   counit-lemmaˡ {x} {y} =
-    begin (x * s (x ⇀ y))                          ≈⟨ distrˡ supfun (λ {( x , _ ) → x}) x ⟩
-          s (sups {supfun} {λ {(t , _ ) → x * t}}) ≤⟨ isLUB sups y (λ { ( _ , proof) → proof}) ⟩
+    begin (x * s (x ⇀ y))                          ≈⟨ distrˡ supfun proj₁ x ⟩
+          s (sups {supfun} {λ {(t , _ ) → x * t}}) ≤⟨ isLUB sups y proj₂ ⟩
           y                                        ∎
     where supfun = Σ Carrier (λ t → x * t ≤ y)
 
@@ -173,12 +176,12 @@ module Exponentials {c a b} (Q : Quantale c a b) where
   -- -- -- adjunction properties, right hom
   adjunctionToʳ : {x y z : Carrier} → x * y ≤ z → x ≤ s (y ↼ z)
   adjunctionToʳ {x} {y} {z} y*x≤z = isUB adjsup ( x , y*x≤z )
-    where adjsup = sups {Σ Carrier (λ x → x * y ≤ z)} {λ {(x , _ ) → x}}
+    where adjsup = sups {Σ Carrier (λ x → x * y ≤ z)} {proj₁}
 
   counit-lemmaʳ : {x y : Carrier} → s (x ↼ y) * x ≤ y
   counit-lemmaʳ {x} {y} =
     begin s (x ↼ y) * x ≈⟨ distrʳ supfun (λ { (x , _) → x }) x ⟩
-          s (sups {supfun} {λ {(t , _ ) → t * x}}) ≤⟨ isLUB sups y (λ { ( _ , proof) → proof}) ⟩
+          s (sups {supfun} {λ {(t , _ ) → t * x}}) ≤⟨ isLUB sups y proj₂ ⟩
           y                                        ∎
     where supfun = Σ Carrier (λ t → t * x ≤ y)
 
@@ -186,11 +189,31 @@ module Exponentials {c a b} (Q : Quantale c a b) where
   unit-lemmaʳ {x} {y} = begin y               ≤⟨ plep ⟩
                               s (x ↼ (y * x)) ∎
     where supfun = Σ Carrier (λ t → t * x ≤ y * x)
-          plep = isUB (sups {supfun} {λ {(fst , _ ) → fst}}) (y , IsPartialOrder.refl isPartialOrder)
-
+          plep = isUB (sups {supfun} {proj₁}) (y , IsPartialOrder.refl isPartialOrder)
 
   adjunctionFromʳ : {x y z : Carrier} → x ≤ s (y ↼ z) → x * y ≤ z
   adjunctionFromʳ {x} {y} {z} x≤[y,z] =
     begin x * y         ≤⟨ *-congʳ y x (s (y ↼ z)) x≤[y,z] ⟩
           s (y ↼ z) * y ≤⟨ counit-lemmaʳ ⟩
           z             ∎
+
+  int-adjunctionˡ : {x y z : Carrier} → s (y ⇀ s (x ⇀ z)) ≈ s ((x * y) ⇀ z)
+  int-adjunctionˡ {x} {y} {z} = IsPartialOrder.antisym isPartialOrder dis dat
+   where
+    supfun = λ p q → Σ Carrier (λ t → p * t ≤ q)
+    seppia : (i : supfun y (s (x ⇀ z))) → fst i ≤ s ((x * y) ⇀ z)
+    seppia (t , y*t≤[x,z]) = adjunctionToˡ {!   !} -- isUB (sups {supfun {!   !} z} {proj₁}) (t , (adjunctionFromˡ (isUB sups {!   !})))
+    dis : s (y ⇀ s (x ⇀ z)) ≤ s ((x * y) ⇀ z)
+    dis = {!   !} -- isLUB (sups {supfun y (s (x ⇀ z))} {proj₁}) (s ((x * y) ⇀ z)) seppia
+    dat : s ((x * y) ⇀ z) ≤ s (y ⇀ s (x ⇀ z))
+    dat = {!   !}
+
+    {-
+    y → (x → z) ≤ (x * y) → z
+
+    LHS = sup {t : y * t ≤ x → z} < isUB >
+          ∀ t → y * t ≤ x → z     < adjunctionFromˡ >
+           x * (y * t) ≤ z =< assoc >
+           (x * y) * t ≤ z ≤< isUB >
+           sup {t : (x * y) * t ≤ z}
+    -}
