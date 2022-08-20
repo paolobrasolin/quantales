@@ -263,3 +263,16 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   LR-hom {x} {y} {z} = sup-extensionality λ i →
       (λ {(lift x*i≤y↼z) → lift (adjunctionToˡ (≤-respˡ-≈ (assoc x i y) (adjunctionFromʳ x*i≤y↼z)))})
     , λ {(lift i*y≤x⇀z) → lift (adjunctionToʳ (≤-respˡ-≈ (Eq.sym (assoc _ _ _)) (adjunctionFromˡ i*y≤x⇀z)))}
+
+module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
+  open import Algebra.Morphism.Definitions
+  open Quantale P
+  open Properties P
+
+  open Quantale Q
+  open Properties Q
+
+  record Supmap (f : Quantale.Carrier P → Quantale.Carrier Q) : Set (c ⊔ ℓ ⊔ e) where
+    field
+      -- _preserves-⋁ : -- todo
+      -- isMagmaHomomorphism : Homomorphic₂ ? ? ?
