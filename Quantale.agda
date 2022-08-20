@@ -345,10 +345,10 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   thm9′ {a} {b} (c , a↼c≈b) = antisym (≤-respʳ-≈ a↼c≈b (↼-congˡ (≤-respˡ-≈ (∙-congʳ a↼c≈b) counit-lemmaʳ))) (adjunctionToʳ refl≤)
 
   lemmaʳ : ∀ {a b c} → c ⇀ a ≈ b → c ≤ b ↼ a
-  lemmaʳ = {!   !}
+  lemmaʳ {a} {b} {c} c⇀a≈b = isUB (b ↼ₛ a) c (lift (≤-respˡ-≈ (∙-congˡ c⇀a≈b) (counit-lemmaˡ {c} {a})))
 
   lemmaˡ : ∀ {a b c} → c ↼ a ≈ b → c ≤ b ⇀ a
-  lemmaˡ = {!   !}
+  lemmaˡ {a} {b} {c} c↼a≈b = isUB (b ⇀ₛ a) c (lift (≤-respˡ-≈ (∙-congʳ c↼a≈b) (counit-lemmaʳ {c} {a})))
 
   thm10 : ∀ {a b} → (b ↼ a) ⇀ a ≈ b → ∃[ c ] c ⇀ a ≈ b
   thm10 {a} {b} b↼a⇀a≈b = (b ↼ a) , b↼a⇀a≈b
