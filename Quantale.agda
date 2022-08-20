@@ -10,6 +10,7 @@ open import Level using (Level; suc; _⊔_)
 open import Relation.Binary using (Rel; IsPartialOrder; IsEquivalence; Minimum; Maximum)
 open import Data.Product
 open import Data.Sum
+open import Algebra.Definitions
 open import Level using (Lift; lift)
 open import Function using (_∘_)
 open import Data.Empty.Polymorphic using ()
@@ -51,18 +52,11 @@ record CompleteJSL c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
     isCompleteJSL : IsCompleteJSL _≈_ _≤_
   open IsCompleteJSL isCompleteJSL public
 
-
-record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  infix 4 _≈_ _≤_
-  infix 5 _*_
+record IsQuantale {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ : Rel Carrier ℓ) (_*_ : Op₂ Carrier) : Set (suc (c ⊔ ℓ ⊔ e)) where
   field
     -- order structure
-    Carrier       : Set c
-    _≈_           : Rel Carrier e
-    _≤_           : Rel Carrier ℓ
     isCompleteJSL : IsCompleteJSL _≈_ _≤_
-    -- semigroup structure
-    _*_           : Op₂ Carrier
+    -- semigroup structures
     isSemigroup   : IsSemigroup _≈_ _*_
 
   open IsCompleteJSL isCompleteJSL public renaming (refl to refl≤; trans to trans≤) hiding (reflexive; isEquivalence)
@@ -73,8 +67,49 @@ record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
   P-op f P = (λ i → ∃[ p ] (P p × i ≈ f p))
 
   field
-    distrˡ        : ∀ P x → x * (⋁ P) ≈ ⋁ (P-op (x *_) P)
-    distrʳ        : ∀ P x → (⋁ P) * x ≈ ⋁ (P-op (_* x) P)
+    distrˡ        : ∀ P x → (x * (⋁ P)) ≈ (⋁ (P-op (x *_) P))
+    distrʳ        : ∀ P x → ((⋁ P) * x) ≈ (⋁ (P-op (_* x) P))
+
+record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  infix 4 _≈_ _≤_
+  infix 5 _*_
+  field
+    -- order structure
+    Carrier       : Set c
+    _≈_           : Rel Carrier e
+    _≤_           : Rel Carrier ℓ
+    _*_           : Op₂ Carrier
+    isQuantale    : IsQuantale _≈_ _≤_ _*_
+
+  open IsQuantale isQuantale public
+
+record CommutativeQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  field
+    Q : Quantale c ℓ e
+
+  open Quantale Q public
+
+  field
+    isCommutative : Commutative _≈_ _*_
+
+record UnitalQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  field
+    Q : Quantale c ℓ e
+
+  open Quantale Q public
+
+  field
+    i        : Carrier
+    isUnital : Identity _≈_ i _*_
+
+record IdempotentQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  field
+    Q : Quantale c ℓ e
+
+  open Quantale Q public
+
+  field
+    isIdempotent : Idempotent _≈_ _*_
 
 module Properties {c ℓ e} (Q : Quantale c ℓ e) where
 
@@ -114,6 +149,7 @@ module Properties {c ℓ e} (Q : Quantale c ℓ e) where
     antisym
       (sup-ext (proj₁ ∘ fi⇔gi))
       (sup-ext (proj₂ ∘ fi⇔gi))
+
   *-congˡ : ∀ {a x y}
           → x ≤ y
           → a * x ≤ a * y
@@ -203,6 +239,26 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   _↼ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
   p ↼ₛ q = sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
 
+  ⇀-congˡ  : ∀ {a x y}
+          → x ≤ y
+          → a ⇀ x ≤ a ⇀ y
+  ⇀-congˡ {a} {x} {y} x≤y = sup-ext λ { i (lift a*i≤x) → lift (trans≤ a*i≤x x≤y) }
+
+  ↼-congˡ  : ∀ {a x y}
+          → x ≤ y
+          → a ↼ x ≤ a ↼ y
+  ↼-congˡ {a} {x} {y} x≤y = sup-ext λ { i (lift a*i≤x) → lift (trans≤ a*i≤x x≤y) }
+
+  ⇀-congʳ : ∀ {a x y}
+          → y ≤ x
+          → x ⇀ a ≤ y ⇀ a
+  ⇀-congʳ {a} {x} {y} x≤y = sup-ext λ { i (lift x*i≤a) → lift (trans≤ (*-congʳ x≤y) x*i≤a) }
+
+  ↼-congʳ : ∀ {a x y}
+          → y ≤ x
+          → x ↼ a ≤ y ↼ a
+  ↼-congʳ {a} {x} {y} x≤y = sup-ext λ { i (lift x*i≤a) → lift (trans≤ (*-congˡ x≤y) x*i≤a) }
+
   open import Relation.Binary.Reasoning.PartialOrder
     (record { Carrier =  Carrier
             ; _≈_ = _≈_
@@ -264,6 +320,49 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
       (λ {(lift x*i≤y↼z) → lift (adjunctionToˡ (≤-respˡ-≈ (assoc x i y) (adjunctionFromʳ x*i≤y↼z)))})
     , λ {(lift i*y≤x⇀z) → lift (adjunctionToʳ (≤-respˡ-≈ (Eq.sym (assoc _ _ _)) (adjunctionFromˡ i*y≤x⇀z)))}
 
+  thm6 : ∀ {a b} → a * (a ⇀ b) ≈ b → ∃[ c ] a * c ≈ b
+  thm6 {a} {b} *a⇀b≈b = (a ⇀ b) , *a⇀b≈b
+
+  thm6′ : ∀ {a b} → ∃[ c ] a * c ≈ b → a * (a ⇀ b) ≈ b
+  thm6′ {a} {b} (c , a*c≈b) = antisym counit-lemmaˡ (trans≤ (≤-respˡ-≈ a*c≈b refl≤) (*-congˡ (isUB (a ⇀ₛ b) c (lift (≤-respʳ-≈ a*c≈b refl≤)))))
+
+  thm7 : ∀ {a b} → (a ↼ b) * a ≈ b → ∃[ c ] c * a ≈ b
+  thm7 {a} {b} *a↼b≈b = (a ↼ b) , *a↼b≈b
+
+  thm7′ : ∀ {a b} → ∃[ c ] c * a ≈ b → (a ↼ b) * a ≈ b
+  thm7′ {a} {b} (c , a*c≈b) = antisym counit-lemmaʳ (trans≤ (≤-respˡ-≈ a*c≈b refl≤) (*-congʳ (isUB (a ↼ₛ b) c (lift (≤-respʳ-≈ a*c≈b refl≤)))))
+
+  thm8 : ∀ {a b} → a ⇀ (a * b) ≈ b → ∃[ c ] a ⇀ c ≈ b
+  thm8 {a} {b} a⇀a*b≈b = (a * b) , a⇀a*b≈b
+
+  thm8′ : ∀ {a b} → ∃[ c ] a ⇀ c ≈ b → a ⇀ (a * b) ≈ b
+  thm8′ {a} {b} (c , a⇀c≈b) = antisym (≤-respʳ-≈ a⇀c≈b (⇀-congˡ (≤-respˡ-≈ (∙-congˡ a⇀c≈b) counit-lemmaˡ))) (adjunctionToˡ refl≤)
+
+  thm9 : ∀ {a b} → a ↼ (b * a) ≈ b → ∃[ c ] a ↼ c ≈ b
+  thm9 {a} {b} a↼a*b≈b = (b * a) , a↼a*b≈b
+
+  thm9′ : ∀ {a b} → ∃[ c ] a ↼ c ≈ b → a ↼ (b * a) ≈ b
+  thm9′ {a} {b} (c , a↼c≈b) = antisym (≤-respʳ-≈ a↼c≈b (↼-congˡ (≤-respˡ-≈ (∙-congʳ a↼c≈b) counit-lemmaʳ))) (adjunctionToʳ refl≤)
+
+  lemmaʳ : ∀ {a b c} → c ⇀ a ≈ b → c ≤ b ↼ a
+  lemmaʳ = {!   !}
+
+  lemmaˡ : ∀ {a b c} → c ↼ a ≈ b → c ≤ b ⇀ a
+  lemmaˡ = {!   !}
+
+  thm10 : ∀ {a b} → (b ↼ a) ⇀ a ≈ b → ∃[ c ] c ⇀ a ≈ b
+  thm10 {a} {b} b↼a⇀a≈b = (b ↼ a) , b↼a⇀a≈b
+
+  thm10′ : ∀ {a b} → ∃[ c ] c ⇀ a ≈ b → (b ↼ a) ⇀ a ≈ b
+  thm10′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (⇀-congʳ (lemmaʳ c⇀a≈b))) {!   !}
+
+  thm11 : ∀ {a b} → (b ⇀ a) ↼ a ≈ b → ∃[ c ] c ↼ a ≈ b
+  thm11 {a} {b} b⇀a↼a≈b = (b ⇀ a) , b⇀a↼a≈b
+
+  thm11′ : ∀ {a b} → ∃[ c ] c ↼ a ≈ b → (b ⇀ a) ↼ a ≈ b
+  thm11′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (↼-congʳ (lemmaˡ c⇀a≈b))) {!   !}
+
+
 module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
   open import Algebra.Morphism.Definitions
   open module P = Quantale P
@@ -275,4 +374,4 @@ module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
   record Supmap (f : P.Carrier → Q.Carrier) : Set (suc (c ⊔ ℓ ⊔ e)) where
     field
       isMagmaHomomorphism : Homomorphic₂ P.Carrier Q.Carrier Q._≈_ f P._*_ Q._*_
-      _preserves-⋁ : ∀ {T : P.Carrier → Set (c ⊔ ℓ ⊔ e)} → Q._≈_ (f (P.⋁ T)) (Q.⋁ (λ x → Σ[ p ∈ P.Carrier ] (T p × (f p Q.≈ x))))
+      _preserves-⋁ : ∀ {T : P.Carrier → Set (c ⊔ ℓ ⊔ e)} → f (P.⋁ T) Q.≈ Q.⋁ (λ x → Σ[ p ∈ P.Carrier ] (T p × (f p Q.≈ x)))
