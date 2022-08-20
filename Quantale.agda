@@ -172,8 +172,8 @@ module BotTop {c a b} (Q : Quantale c a b) where
   ⊥-min : Minimum _≤_ ⊥
   ⊥-min = λ x → isLUB (sup (λ _ → False)) x λ t ()
 
-  ⊤-min : Maximum _≤_ ⊤
-  ⊤-min = λ x → isUB (sup (λ _ → True)) x tt
+  ⊤-max : Maximum _≤_ ⊤
+  ⊤-max = λ x → isUB (sup (λ _ → True)) x tt
 
   ⊥-absorbsˡ : ∀ (x : Carrier) → x * ⊥ ≈ ⊥
   ⊥-absorbsˡ x =
@@ -187,8 +187,6 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   open Quantale Q
   open Properties Q
 
-
-
   -- left internal hom
   _⇀_ : Carrier → Carrier → Carrier
   p ⇀ q = ⋁ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
@@ -197,11 +195,11 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   _↼_ : Carrier → Carrier → Carrier
   p ↼ q = ⋁ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
 
-  -- left internal hom
+  -- left internal hom, whole record
   _⇀ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
   p ⇀ₛ q = sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
 
-  -- right internal hom
+  -- right internal hom, whole record
   _↼ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
   p ↼ₛ q = sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
 
@@ -259,3 +257,9 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   int-adjunctionʳ {x} {y} {z} = sup-extensionality λ i →
       (λ { (lift p) → lift (≤-respˡ-≈ (assoc _ _ _) (adjunctionFromʳ p)) })
     , (λ { (lift p) → lift (adjunctionToʳ (≤-respˡ-≈ (Eq.sym (assoc _ _ _)) p)) })
+
+  -- the way left and right hom interact
+  LR-hom : ∀ {x y z} → x ⇀ (y ↼ z) ≈ y ↼ (x ⇀ z)
+  LR-hom {x} {y} {z} = sup-extensionality λ i →
+      (λ {(lift x*i≤y↼z) → lift (adjunctionToˡ (≤-respˡ-≈ (assoc x i y) (adjunctionFromʳ x*i≤y↼z)))})
+    , λ {(lift i*y≤x⇀z) → lift (adjunctionToʳ (≤-respˡ-≈ (Eq.sym (assoc _ _ _)) (adjunctionFromˡ i*y≤x⇀z)))}
