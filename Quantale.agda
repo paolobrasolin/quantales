@@ -7,213 +7,252 @@ open import Algebra.Lattice.Bundles
 open import Algebra.Core
 open import Algebra.Structures
 open import Level using (Level; suc; _⊔_)
-open import Relation.Binary
+open import Relation.Binary using (Rel; IsPartialOrder; IsEquivalence; Minimum; Maximum)
 open import Data.Product
-open import Data.Empty.Polymorphic
-open import Relation.Binary.PropositionalEquality as Eq using (_≡_; subst₂)
+open import Data.Sum
+open import Level using (Lift; lift)
+open import Function using (_∘_)
+open import Data.Empty.Polymorphic using ()
+open import Relation.Binary.Reasoning.Setoid using ()
+open import Relation.Binary.PropositionalEquality using (_≡_; subst₂)
 
-record Sups c ℓ (I : Set (c ⊔ ℓ)) (P : Set c) (_≤_ : Rel P ℓ) (f : I → P) : (Set (suc (c ⊔ ℓ))) where
-  field
-    s      : P
-    isUB   : ∀ (i : I) → (f i) ≤ s
-    isLUB  : (t : P) → (∀ (i : I) → f i ≤ t) → s ≤ t
-    -- actually it's an iff:
-    isLUB' : (t : P) → s ≤ t → (∀ (i : I) → f i ≤ t)
+module Sup-Poset {c ℓ} (Carrier : Set c) (_≤_ : Rel Carrier ℓ) where
 
-open Sups public
+  record Sup {e} (P : Carrier → Set (c ⊔ ℓ ⊔ e)) : (Set (suc (c ⊔ ℓ ⊔ e))) where
 
-record IsCompleteJSL {c ℓ ℓ'} {A : Set c} (_≈_ : Rel A ℓ) (_≤_ : Rel A ℓ') : Set (suc (c ⊔ ℓ ⊔ ℓ')) where
+    _isUpperBound : Carrier → Set (c ⊔ ℓ ⊔ e)
+    s isUpperBound = ∀ x → P x → x ≤ s
+
+    field
+      s      : Carrier
+      isUB   : s isUpperBound
+      isLUB  : ∀ t → t isUpperBound → s ≤ t
+      -- actually it's an iff:
+      isLUB' : ∀ t → s ≤ t → s isUpperBound
+
+  open Sup public
+
+
+record IsCompleteJSL {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ : Rel Carrier ℓ) : Set (suc (c ⊔ ℓ ⊔ e)) where
+  open Sup-Poset Carrier _≤_ public
   field
     isPartialOrder : IsPartialOrder _≈_ _≤_
-    sups           : ∀ {I : Set (c ⊔ ℓ')} {f : I → A} → Sups c ℓ' I A (_≤_) f
+
+    sup            : ∀ Carrier → Sup {e = e} Carrier
+
+  ⋁ : ∀ P → Carrier
+  ⋁ P = s (sup P)
+
   open IsPartialOrder isPartialOrder public
 
-record CompleteJSL c ℓ ℓ' : Set (suc (c ⊔ ℓ ⊔ ℓ')) where
+record CompleteJSL c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
   infix  4 _≈_ _≤_
   field
     Carrier       : Set c
-    _≈_           : Rel Carrier ℓ
-    _≤_           : Rel Carrier ℓ'
+    _≈_           : Rel Carrier e
+    _≤_           : Rel Carrier ℓ
     isCompleteJSL : IsCompleteJSL _≈_ _≤_
   open IsCompleteJSL isCompleteJSL public
 
-record Quantale c ℓ ℓ' : Set (suc (c ⊔ ℓ ⊔ ℓ')) where
+
+record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
   infix 4 _≈_ _≤_
   infix 5 _*_
   field
     -- order structure
     Carrier       : Set c
-    _≈_           : Rel Carrier ℓ
-    _≤_           : Rel Carrier ℓ'
+    _≈_           : Rel Carrier e
+    _≤_           : Rel Carrier ℓ
     isCompleteJSL : IsCompleteJSL _≈_ _≤_
     -- semigroup structure
     _*_           : Op₂ Carrier
     isSemigroup   : IsSemigroup _≈_ _*_
-  open IsCompleteJSL isCompleteJSL public hiding (refl; reflexive; isEquivalence) -- TODO: evitare questo
+
+  open IsCompleteJSL isCompleteJSL public renaming (refl to refl≤; trans to trans≤) hiding (reflexive; isEquivalence)
+  open IsSemigroup isSemigroup     public renaming (refl to refl≈; trans to trans≈)
+
+  -- generic action on the elements of a predicate
+  P-op : (f : Carrier → Carrier) → (Carrier → Set (c ⊔ ℓ ⊔ e)) → (Carrier → Set (c ⊔ ℓ ⊔ e))
+  P-op f P = (λ i → ∃[ p ] (P p × i ≈ f p))
+
   field
-    distrˡ        : (I : Set (c ⊔ ℓ')) (y : I → Carrier) (x : Carrier) → (x * s (sups {I} {y})) ≈ s (sups {I} {λ i → x * (y i)})
-    distrʳ        : (I : Set (c ⊔ ℓ')) (y : I → Carrier) (x : Carrier) → (s (sups {I} {y})) * x ≈ s (sups {I} {λ i → (y i) * x})
-  open IsSemigroup isSemigroup public
+    distrˡ        : ∀ P x → x * (⋁ P) ≈ ⋁ (P-op (x *_) P)
+    distrʳ        : ∀ P x → (⋁ P) * x ≈ ⋁ (P-op (_* x) P)
 
+module Properties {c ℓ e} (Q : Quantale c ℓ e) where
 
-module Minima {c a b} (Q : Quantale c a b) where
+  open Quantale Q
 
-  open module zap = Quantale Q
-  open import Relation.Binary.Reasoning.Setoid setoid
-  open import Agda.Builtin.Sigma
+  ∨-predicate : Carrier → Carrier → Carrier → Set (c ⊔ ℓ ⊔ e)
+  ∨-predicate a b = (λ p → Level.Lift (c ⊔ ℓ ⊔ e) ((a ≈ p) ⊎ (b ≈ p)))
 
-  postulate
-    ⊥-initial : {A : Set c} {f : (⊥ {c ⊔ b}) → A} → f ≡ ⊥-elim
+  _∨_ : Carrier → Carrier → Carrier
+  a ∨ b = ⋁ (∨-predicate a b)
 
-  subst : ∀ {A : Set c} (_∼_ : Rel A a) {x y} → (eq : IsEquivalence _∼_) → x ≡ y → x ∼ y
-  subst _∼_ record { refl = refl ; sym = _ ; trans = _ } p rewrite p = refl
+  _∨ₛ_ : (a : Carrier) → (b : Carrier) → Sup (∨-predicate a b)
+  a ∨ₛ b = sup (∨-predicate a b)
 
-  -- ^ is this really necessary? IsPartialOrder _≈_ _≤_ should provide something like this, and a ≈-≤-cong...
+  ≤→a∨b≈b : ∀ {a} {b}
+          → a ≤ b
+          → a ∨ b ≈ b
+  ≤→a∨b≈b {a} {b} a≤b =
+    antisym (isLUB (a ∨ₛ b) b λ { x (lift (inj₁ a≈x)) → ≤-respˡ-≈ a≈x a≤b
+                                ; x (lift (inj₂ b≈x)) → ≤-respˡ-≈ b≈x refl≤ })
+            (isUB (a ∨ₛ b) b (lift (inj₂ refl≈)))
 
-  record min : Set (suc (c ⊔ a ⊔ b)) where
-    field
-      bot   : Carrier
-      isMin : ∀ {t : Carrier} → bot ≤ t
+  a∨b≈b→≤ : ∀ {a} {b}
+          → a ∨ b ≈ b
+          → a ≤ b
+  a∨b≈b→≤ {a} {b} a∨b≈b = ≤-respʳ-≈ a∨b≈b (isUB (a ∨ₛ b) a (lift (inj₁ refl≈)))
 
-  has⊥ : min
-  has⊥ = record
-    { bot = s emptyFamily
-    ; isMin = λ {t} → isLUB emptyFamily t ⊥-elim
-    }
-    where
-      emptyFamily : _
-      emptyFamily = (IsCompleteJSL.sups isCompleteJSL) {⊥} {⊥-elim}
+  sup-ext : ∀ {f} {g}
+              → (∀ i → (f i → g i))
+              → (⋁ f) ≤ (⋁ g)
+  sup-ext {f} {g} fi→gi = isLUB (sup f) (⋁ g) λ x fx → isUB (sup g) x (fi→gi x fx)
 
-  ⊥-absorbsˡ : ∀ (x : Carrier) → x * (min.bot has⊥) ≈ (min.bot has⊥)
+  sup-extensionality : ∀ {f} {g}
+              → (∀ i → (f i → g i) × (g i → f i))
+              → (⋁ f) ≈ (⋁ g)
+  sup-extensionality {f} {g} fi⇔gi =
+    antisym
+      (sup-ext (proj₁ ∘ fi⇔gi))
+      (sup-ext (proj₂ ∘ fi⇔gi))
+
+module BotTop {c a b} (Q : Quantale c a b) where
+
+  open Quantale Q
+  open Properties Q
+  open import Data.Empty.Polymorphic renaming (⊥ to False)
+  open import Data.Unit.Polymorphic renaming (⊤ to True)
+
+  ⊥ : Carrier
+  ⊥ = ⋁ (λ _ → False)
+
+  ⊤ : Carrier
+  ⊤ = ⋁ (λ _ → True)
+
+  ⊥-min : Minimum _≤_ ⊥
+  ⊥-min = λ x → isLUB (sup (λ _ → False)) x λ t ()
+
+  ⊤-min : Maximum _≤_ ⊤
+  ⊤-min = λ x → isUB (sup (λ _ → True)) x tt
+
+  ⊥-absorbsˡ : ∀ (x : Carrier) → x * ⊥ ≈ ⊥
   ⊥-absorbsˡ x =
-    begin x * min.bot has⊥                            ≈⟨ distrˡ ⊥ ⊥-elim x ⟩
-          s (sups {⊥} {λ i → x * (⊥-elim i)}) ≈⟨ subst _≈_ isEquivalence pof ⟩
-          s (sups {⊥} {⊥-elim})               ≈⟨ subst _≈_ isEquivalence _≡_.refl ⟩
-          min.bot has⊥                                ∎
-    where pof = Eq.cong (λ t → s (sups {⊥} {t})) ⊥-initial
+    begin x * ⊥                         ≈⟨ distrˡ (λ _ → False) x ⟩
+          ⋁ (P-op (x *_) (λ _ → False)) ≈⟨ sup-extensionality (λ i → (λ ()) , λ ()) ⟩
+          ⊥                             ∎
+    where open import Relation.Binary.Reasoning.Setoid setoid
 
-open Minima
+module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
-{-
-module _ {c a b} (Q : Quantale c a b) where
+  open Quantale Q
+  open Properties Q
 
-  open module zup = Quantale Q
+  *-congˡ : ∀ {a x y}
+          → x ≤ y
+          → a * x ≤ a * y
+  *-congˡ {a} {x} {y} x≤y =
+    let
+        convert-P-op : ((a * x) ∨ (a * y)) ≈ ⋁ (P-op (a *_) (∨-predicate x y))
+        convert-P-op = Eq.sym (sup-extensionality
+               (λ i → (λ { (t , lift (inj₁ r) , k) → lift (inj₁ (trans≈ (∙-congˡ r) (Eq.sym k)))
+                         ; (t , lift (inj₂ r) , k) → lift (inj₂ (trans≈ (∙-congˡ r) (Eq.sym k))) })
+                    , (λ { (lift (inj₁ a*x≈i)) → x , lift (inj₁ refl≈) , Eq.sym a*x≈i
+                         ; (lift (inj₂ a*y≈i)) → y , lift (inj₂ refl≈) , Eq.sym a*y≈i })))
 
-  open import Agda.Builtin.Sigma
-  open import Relation.Binary.Reasoning.PartialOrder (record { Carrier =  Carrier ; _≈_ = _≈_ ; _≤_ = _≤_ ; isPartialOrder = isPartialOrder })
+        t : (a * x) ∨ (a * y) ≈ a * y
+        t =
+          let open Relation.Binary.Reasoning.Setoid setoid in
+          begin (a * x) ∨ (a * y)                 ≈⟨ convert-P-op ⟩
+                ⋁ (P-op (a *_) (∨-predicate x y)) ≈⟨ Eq.sym (distrˡ ((∨-predicate x y)) a)  ⟩
+                a * (x ∨ y)                       ≈⟨ ∙-congˡ (≤→a∨b≈b x≤y) ⟩
+                a * y                             ∎
+        in a∨b≈b→≤ t
 
-  sup-functor : {I : Set (c ⊔ b)} {f g : I → Carrier} → (∀ {i : I} → f i ≤ g i) → (s (sups {I} {f})) ≤ (s (sups {I} {g}))
-  sup-functor {I} {f} {g} fi≤gi = begin s (sups {I} {f}) ≤⟨ isLUB sups (s (sups {I} {g})) (λ t → clop) ⟩
-                                      s (sups {I} {g}) ∎
-                                      where clop : {t : I} → f t ≤ s (sups {I} {g})
-                                            clop {t} = begin f t ≤⟨ fi≤gi ⟩ g t ≤⟨ isUB sups t ⟩ s (sups) ∎
+  *-congʳ : ∀ {a x y}
+          → x ≤ y
+          → x * a ≤ y * a
+  *-congʳ {a} {x} {y} x≤y =
+    let
+        convert-P-op : ((x * a) ∨ (y * a)) ≈ ⋁ (P-op (_* a) (∨-predicate x y))
+        convert-P-op = Eq.sym (sup-extensionality
+               (λ i → (λ { (t , lift (inj₁ r) , k) → lift (inj₁ (trans≈ (∙-congʳ r) (Eq.sym k)))
+                         ; (t , lift (inj₂ r) , k) → lift (inj₂ (trans≈ (∙-congʳ r) (Eq.sym k))) })
+                    , (λ { (lift (inj₁ a*x≈i)) → x , lift (inj₁ refl≈) , Eq.sym a*x≈i
+                         ; (lift (inj₂ a*y≈i)) → y , lift (inj₂ refl≈) , Eq.sym a*y≈i })))
 
-  data ⊤ : Set (c ⊔ b) where
-    ● : ⊤
+        t : (x * a) ∨ (y * a) ≈ y * a
+        t =
+          let open Relation.Binary.Reasoning.Setoid setoid in
+          begin (x * a) ∨ (y * a)                 ≈⟨ convert-P-op ⟩
+                ⋁ (P-op (_* a) (∨-predicate x y)) ≈⟨ Eq.sym (distrʳ ((∨-predicate x y)) a)  ⟩
+                (x ∨ y) * a                       ≈⟨ ∙-congʳ (≤→a∨b≈b x≤y) ⟩
+                y * a                             ∎
+        in a∨b≈b→≤ t
 
-  sup⊤ : ∀ {f : ⊤ → Carrier} → s (sups {⊤} {f}) ≈ f ●
-  sup⊤ {f} = antisym dis dat
-    where dis : s sups ≤ f ●
-          dis = isLUB sups (f ●) (λ { ● → IsPartialOrder.refl isPartialOrder})
-          dat : f ● ≤ s sups
-          dat = isUB sups ●
--}
+  -- left internal hom
+  _⇀_ : Carrier → Carrier → Carrier
+  p ⇀ q = ⋁ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
 
-module Exponentials {c a b} (Q : Quantale c a b) where
+  -- right internal hom
+  _↼_ : Carrier → Carrier → Carrier
+  p ↼ q = ⋁ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
 
-  open module zop = Quantale Q
+  -- left internal hom
+  _⇀ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
+  p ⇀ₛ q = sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
 
-  open import Agda.Builtin.Sigma
+  -- right internal hom
+  _↼ₛ_ : (p : Carrier) → (q : Carrier) → Sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
+  p ↼ₛ q = sup (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (t * p ≤ q))
+
   open import Relation.Binary.Reasoning.PartialOrder
     (record { Carrier =  Carrier
             ; _≈_ = _≈_
             ; _≤_ = _≤_
             ; isPartialOrder = isPartialOrder
             })
-  -- TODO: import different reasonings locally to avoid clash
-  -- TODO: that record is very verbose; is there a better way?
-  postulate
-    *-congˡ : (x y z : Carrier) → y ≤ z → x * y ≤ x * z
-    *-congʳ : (x y z : Carrier) → y ≤ z → y * x ≤ z * x
-  -- TODO: probably provable?
 
-  -- left internal hom
-  _⇀_ : (p : Carrier) → (q : Carrier) →
-    Sups c b (Σ Carrier (λ x → p * x ≤ q)) Carrier _≤_ proj₁
-  p ⇀ q = sups {supfun p q} {proj₁}
-    where supfun = λ p q → Σ Carrier (λ t → p * t ≤ q)
 
-  -- right internal hom
-  _↼_ : (p : Carrier) → (q : Carrier) →
-    Sups c b (Σ Carrier (λ x → x * p ≤ q)) Carrier _≤_ proj₁
-  p ↼ q = sups {supfun p q} {proj₁}
-    where supfun = λ p q → Σ Carrier (λ t → t * p ≤ q)
-
-  -- -- -- adjunction properties, left hom
-  adjunctionToˡ : {x y z : Carrier} → y * x ≤ z → x ≤ s (y ⇀ z)
-  adjunctionToˡ {x} {y} {z} y*x≤z = isUB adjsup ( x , y*x≤z )
-    where adjsup = sups {Σ Carrier (λ x → y * x ≤ z)} {proj₁}
-
-  counit-lemmaˡ : {x y : Carrier} → x * s (x ⇀ y) ≤ y
+  -- adjunction properties, left hom
+  counit-lemmaˡ : ∀ {x y} → x * (x ⇀ y) ≤ y
   counit-lemmaˡ {x} {y} =
-    begin (x * s (x ⇀ y))                          ≈⟨ distrˡ supfun proj₁ x ⟩
-          s (sups {supfun} {λ {(t , _ ) → x * t}}) ≤⟨ isLUB sups y proj₂ ⟩
-          y                                        ∎
-    where supfun = Σ Carrier (λ t → x * t ≤ y)
+    begin x * (x ⇀ y) ≈⟨ distrˡ _ x ⟩
+          ⋁ _         ≤⟨ isLUB (sup _) y (λ { t (o , lift k , e) → ≤-respˡ-≈ (sym e) k }) ⟩
+          y           ∎
 
-  unit-lemmaˡ : {x y : Carrier} → y ≤ s (x ⇀ (x * y))
-  unit-lemmaˡ {x} {y} = begin y               ≤⟨ plep ⟩
-                              s (x ⇀ (x * y)) ∎
-    where supfun = Σ Carrier (λ t → x * t ≤ x * y)
-          plep = isUB (sups {supfun} {λ {(fst , _ ) → fst}}) (y , IsPartialOrder.refl isPartialOrder)
-
-  adjunctionFromˡ : {x y z : Carrier} → x ≤ s (y ⇀ z) → y * x ≤ z
-  adjunctionFromˡ {x} {y} {z} x≤[y,z] =
-    begin y * x         ≤⟨ *-congˡ y x (s (y ⇀ z)) x≤[y,z] ⟩
-          y * s (y ⇀ z) ≤⟨ counit-lemmaˡ ⟩
-          z             ∎
-
-  -- -- -- adjunction properties, right hom
-  adjunctionToʳ : {x y z : Carrier} → x * y ≤ z → x ≤ s (y ↼ z)
-  adjunctionToʳ {x} {y} {z} y*x≤z = isUB adjsup ( x , y*x≤z )
-    where adjsup = sups {Σ Carrier (λ x → x * y ≤ z)} {proj₁}
-
-  counit-lemmaʳ : {x y : Carrier} → s (x ↼ y) * x ≤ y
+  -- adjunction properties, left hom
+  counit-lemmaʳ : {x y : Carrier} → (x ↼ y) * x ≤ y
   counit-lemmaʳ {x} {y} =
-    begin s (x ↼ y) * x ≈⟨ distrʳ supfun (λ { (x , _) → x }) x ⟩
-          s (sups {supfun} {λ {(t , _ ) → t * x}}) ≤⟨ isLUB sups y proj₂ ⟩
-          y                                        ∎
-    where supfun = Σ Carrier (λ t → t * x ≤ y)
+    begin (x ↼ y) * x ≈⟨ distrʳ _ x ⟩
+          ⋁ _         ≤⟨ isLUB (sup _) y (λ { t (o , lift k , e) → ≤-respˡ-≈ (sym e) k }) ⟩
+          y           ∎
 
-  unit-lemmaʳ : {x y : Carrier} → y ≤ s (x ↼ (y * x))
-  unit-lemmaʳ {x} {y} = begin y               ≤⟨ plep ⟩
-                              s (x ↼ (y * x)) ∎
-    where supfun = Σ Carrier (λ t → t * x ≤ y * x)
-          plep = isUB (sups {supfun} {proj₁}) (y , IsPartialOrder.refl isPartialOrder)
+  unit-lemmaˡ : ∀ {x y} → y ≤ (x ⇀ (x * y))
+  unit-lemmaˡ {x} {y} =
+    begin y             ≤⟨ isUB (x ⇀ₛ (x * y)) y (lift refl≤) ⟩
+          (x ⇀ (x * y)) ∎
 
-  adjunctionFromʳ : {x y z : Carrier} → x ≤ s (y ↼ z) → x * y ≤ z
+  adjunctionFromˡ : ∀ {x y z} → x ≤ (y ⇀ z) → y * x ≤ z
+  adjunctionFromˡ {x} {y} {z} x≤[y,z] =
+    begin y * x       ≤⟨ *-congˡ x≤[y,z] ⟩
+          y * (y ⇀ z) ≤⟨ counit-lemmaˡ ⟩
+          z           ∎
+
+  adjunctionFromʳ : {x y z : Carrier} → x ≤ (y ↼ z) → x * y ≤ z
   adjunctionFromʳ {x} {y} {z} x≤[y,z] =
-    begin x * y         ≤⟨ *-congʳ y x (s (y ↼ z)) x≤[y,z] ⟩
-          s (y ↼ z) * y ≤⟨ counit-lemmaʳ ⟩
-          z             ∎
+    begin x * y       ≤⟨ *-congʳ x≤[y,z] ⟩
+          (y ↼ z) * y ≤⟨ counit-lemmaʳ ⟩
+          z           ∎
 
-  int-adjunctionˡ : {x y z : Carrier} → s (y ⇀ s (x ⇀ z)) ≈ s ((x * y) ⇀ z)
-  int-adjunctionˡ {x} {y} {z} = IsPartialOrder.antisym isPartialOrder dis dat
-   where
-    supfun = λ p q → Σ Carrier (λ t → p * t ≤ q)
-    seppia : (i : supfun y (s (x ⇀ z))) → fst i ≤ s ((x * y) ⇀ z)
-    seppia (t , y*t≤[x,z]) = adjunctionToˡ {!   !} -- isUB (sups {supfun {!   !} z} {proj₁}) (t , (adjunctionFromˡ (isUB sups {!   !})))
-    dis : s (y ⇀ s (x ⇀ z)) ≤ s ((x * y) ⇀ z)
-    dis = {!   !} -- isLUB (sups {supfun y (s (x ⇀ z))} {proj₁}) (s ((x * y) ⇀ z)) seppia
-    dat : s ((x * y) ⇀ z) ≤ s (y ⇀ s (x ⇀ z))
-    dat = {!   !}
+  adjunctionToˡ : {x y z : Carrier} → y * x ≤ z → x ≤ y ⇀ z
+  adjunctionToˡ {x} {y} {z} y*x≤z = isUB (y ⇀ₛ z) x (lift y*x≤z)
 
-    {-
-    y → (x → z) ≤ (x * y) → z
+  adjunctionToʳ : {x y z : Carrier} → x * y ≤ z → x ≤ (y ↼ z)
+  adjunctionToʳ {x} {y} {z} x*y≤z = isUB (y ↼ₛ z) x (lift x*y≤z)
 
-    LHS = sup {t : y * t ≤ x → z} < isUB >
-          ∀ t → y * t ≤ x → z     < adjunctionFromˡ >
-           x * (y * t) ≤ z =< assoc >
-           (x * y) * t ≤ z ≤< isUB >
-           sup {t : (x * y) * t ≤ z}
-    -}
+  int-adjunctionˡ : ∀ {x y z} → (y ⇀ (x ⇀ z)) ≈ ((x * y) ⇀ z)
+  int-adjunctionˡ {x} {y} {z} = sup-extensionality λ i →
+      (λ { (lift p) → lift (≤-respˡ-≈ (Eq.sym (assoc _ _ _)) (adjunctionFromˡ p)) })
+    , (λ { (lift p) → lift (adjunctionToˡ (≤-respˡ-≈ (assoc _ _ _) p)) })
