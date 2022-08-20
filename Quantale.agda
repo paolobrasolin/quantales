@@ -218,6 +218,55 @@ module BotTop {c a b} (Q : Quantale c a b) where
           ⊥                             ∎
     where open import Relation.Binary.Reasoning.Setoid setoid
 
+open BotTop public
+
+record RightSidedQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  field
+    Q : Quantale c ℓ e
+
+  open Quantale Q public
+
+  field
+    sidedʳ : ∀ {a : Carrier} → a * ⊤ Q ≤ a
+
+record LeftSidedQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  field
+    Q : Quantale c ℓ e
+
+  open Quantale Q public
+
+  field
+    sidedˡ : ∀ {a : Carrier} → ⊤ Q * a ≤ a
+
+record StrictlyRightSidedQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  field
+    Q : Quantale c ℓ e
+
+  open Quantale Q public
+
+  field
+    strictSidedʳ : ∀ {a : Carrier} → a * ⊤ Q ≈ a
+
+record StrictlyLeftSidedQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  field
+    Q : Quantale c ℓ e
+
+  open Quantale Q public
+
+  field
+    strictSidedˡ : ∀ {a : Carrier} → ⊤ Q * a ≈ a
+
+record AffineQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
+  field
+    Q : Quantale c ℓ e
+
+  open Quantale Q public
+
+  field
+    i        : Carrier
+    isUnital : Identity _≈_ i _*_
+    affine   : i ≈ ⊤ Q
+
 module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
   open Quantale Q
