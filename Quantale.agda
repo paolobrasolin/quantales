@@ -266,13 +266,13 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
 module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
   open import Algebra.Morphism.Definitions
-  open Quantale P
-  open Properties P
+  open module P = Quantale P
+  open module pP = Properties P
 
-  open Quantale Q
-  open Properties Q
+  open module Q = Quantale Q
+  open module pQ = Properties Q
 
-  record Supmap (f : Quantale.Carrier P → Quantale.Carrier Q) : Set (c ⊔ ℓ ⊔ e) where
+  record Supmap (f : P.Carrier → Q.Carrier) : Set (suc (c ⊔ ℓ ⊔ e)) where
     field
-      -- _preserves-⋁ : -- todo
-      -- isMagmaHomomorphism : Homomorphic₂ ? ? ?
+      isMagmaHomomorphism : Homomorphic₂ P.Carrier Q.Carrier Q._≈_ f P._*_ Q._*_
+      _preserves-⋁ : ∀ {T : P.Carrier → Set (c ⊔ ℓ ⊔ e)} → Q._≈_ (f (P.⋁ T)) (Q.⋁ (λ x → Σ[ p ∈ P.Carrier ] (T p × (f p Q.≈ x))))
