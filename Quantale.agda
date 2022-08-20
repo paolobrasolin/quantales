@@ -27,8 +27,6 @@ module Sup-Poset {c ℓ} (Carrier : Set c) (_≤_ : Rel Carrier ℓ) where
       s      : Carrier
       isUB   : s isUpperBound
       isLUB  : ∀ t → t isUpperBound → s ≤ t
-      -- actually it's an iff:
-      isLUB' : ∀ t → s ≤ t → s isUpperBound
 
   open Sup public
 
@@ -37,7 +35,6 @@ record IsCompleteJSL {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ 
   open Sup-Poset Carrier _≤_ public
   field
     isPartialOrder : IsPartialOrder _≈_ _≤_
-
     sup            : ∀ Carrier → Sup {e = e} Carrier
 
   ⋁ : ∀ P → Carrier
@@ -117,38 +114,6 @@ module Properties {c ℓ e} (Q : Quantale c ℓ e) where
     antisym
       (sup-ext (proj₁ ∘ fi⇔gi))
       (sup-ext (proj₂ ∘ fi⇔gi))
-
-module BotTop {c a b} (Q : Quantale c a b) where
-
-  open Quantale Q
-  open Properties Q
-  open import Data.Empty.Polymorphic renaming (⊥ to False)
-  open import Data.Unit.Polymorphic renaming (⊤ to True)
-
-  ⊥ : Carrier
-  ⊥ = ⋁ (λ _ → False)
-
-  ⊤ : Carrier
-  ⊤ = ⋁ (λ _ → True)
-
-  ⊥-min : Minimum _≤_ ⊥
-  ⊥-min = λ x → isLUB (sup (λ _ → False)) x λ t ()
-
-  ⊤-min : Maximum _≤_ ⊤
-  ⊤-min = λ x → isUB (sup (λ _ → True)) x tt
-
-  ⊥-absorbsˡ : ∀ (x : Carrier) → x * ⊥ ≈ ⊥
-  ⊥-absorbsˡ x =
-    begin x * ⊥                         ≈⟨ distrˡ (λ _ → False) x ⟩
-          ⋁ (P-op (x *_) (λ _ → False)) ≈⟨ sup-extensionality (λ i → (λ ()) , λ ()) ⟩
-          ⊥                             ∎
-    where open import Relation.Binary.Reasoning.Setoid setoid
-
-module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
-
-  open Quantale Q
-  open Properties Q
-
   *-congˡ : ∀ {a x y}
           → x ≤ y
           → a * x ≤ a * y
@@ -191,6 +156,39 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
                 y * a                             ∎
         in a∨b≈b→≤ t
 
+module BotTop {c a b} (Q : Quantale c a b) where
+
+  open Quantale Q
+  open Properties Q
+  open import Data.Empty.Polymorphic renaming (⊥ to False)
+  open import Data.Unit.Polymorphic renaming (⊤ to True)
+
+  ⊥ : Carrier
+  ⊥ = ⋁ (λ _ → False)
+
+  ⊤ : Carrier
+  ⊤ = ⋁ (λ _ → True)
+
+  ⊥-min : Minimum _≤_ ⊥
+  ⊥-min = λ x → isLUB (sup (λ _ → False)) x λ t ()
+
+  ⊤-min : Maximum _≤_ ⊤
+  ⊤-min = λ x → isUB (sup (λ _ → True)) x tt
+
+  ⊥-absorbsˡ : ∀ (x : Carrier) → x * ⊥ ≈ ⊥
+  ⊥-absorbsˡ x =
+    begin x * ⊥                         ≈⟨ distrˡ (λ _ → False) x ⟩
+          ⋁ (P-op (x *_) (λ _ → False)) ≈⟨ sup-extensionality (λ i → (λ ()) , λ ()) ⟩
+          ⊥                             ∎
+    where open import Relation.Binary.Reasoning.Setoid setoid
+
+module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
+
+  open Quantale Q
+  open Properties Q
+
+
+
   -- left internal hom
   _⇀_ : Carrier → Carrier → Carrier
   p ⇀ q = ⋁ (λ t → Level.Lift (c ⊔ ℓ ⊔ e) (p * t ≤ q))
@@ -213,7 +211,6 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
             ; _≤_ = _≤_
             ; isPartialOrder = isPartialOrder
             })
-
 
   -- adjunction properties, left hom
   counit-lemmaˡ : ∀ {x y} → x * (x ⇀ y) ≤ y
@@ -252,7 +249,13 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   adjunctionToʳ : {x y z : Carrier} → x * y ≤ z → x ≤ (y ↼ z)
   adjunctionToʳ {x} {y} {z} x*y≤z = isUB (y ↼ₛ z) x (lift x*y≤z)
 
+  -- the adjunction (x * _ ⊣ x ⇀ _) in a quantale internalizes
   int-adjunctionˡ : ∀ {x y z} → (y ⇀ (x ⇀ z)) ≈ ((x * y) ⇀ z)
   int-adjunctionˡ {x} {y} {z} = sup-extensionality λ i →
       (λ { (lift p) → lift (≤-respˡ-≈ (Eq.sym (assoc _ _ _)) (adjunctionFromˡ p)) })
     , (λ { (lift p) → lift (adjunctionToˡ (≤-respˡ-≈ (assoc _ _ _) p)) })
+
+  int-adjunctionʳ : ∀ {x y z} → (y ↼ (x ↼ z)) ≈ ((y * x) ↼ z)
+  int-adjunctionʳ {x} {y} {z} = sup-extensionality λ i →
+      (λ { (lift p) → lift (≤-respˡ-≈ (assoc _ _ _) (adjunctionFromʳ p)) })
+    , (λ { (lift p) → lift (adjunctionToʳ (≤-respˡ-≈ (Eq.sym (assoc _ _ _)) p)) })
