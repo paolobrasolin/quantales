@@ -354,13 +354,13 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   thm10 {a} {b} b↼a⇀a≈b = (b ↼ a) , b↼a⇀a≈b
 
   thm10′ : ∀ {a b} → ∃[ c ] c ⇀ a ≈ b → (b ↼ a) ⇀ a ≈ b
-  thm10′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (⇀-congʳ (lemmaʳ c⇀a≈b))) {!   !}
+  thm10′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (⇀-congʳ (lemmaʳ c⇀a≈b))) (isUB ((b ↼ a) ⇀ₛ a) b (lift counit-lemmaʳ))
 
   thm11 : ∀ {a b} → (b ⇀ a) ↼ a ≈ b → ∃[ c ] c ↼ a ≈ b
   thm11 {a} {b} b⇀a↼a≈b = (b ⇀ a) , b⇀a↼a≈b
 
   thm11′ : ∀ {a b} → ∃[ c ] c ↼ a ≈ b → (b ⇀ a) ↼ a ≈ b
-  thm11′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (↼-congʳ (lemmaˡ c⇀a≈b))) {!   !}
+  thm11′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (↼-congʳ (lemmaˡ c⇀a≈b))) (isUB ((b ⇀ a) ↼ₛ a) b (lift counit-lemmaˡ))
 
 
 module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
