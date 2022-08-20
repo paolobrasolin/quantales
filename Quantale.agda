@@ -32,10 +32,12 @@ module Sup-Poset {c ℓ} (Carrier : Set c) (_≤_ : Rel Carrier ℓ) where
 
   open Sup public
 
+
 record IsCompleteJSL {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ : Rel Carrier ℓ) : Set (suc (c ⊔ ℓ ⊔ e)) where
   open Sup-Poset Carrier _≤_ public
   field
     isPartialOrder : IsPartialOrder _≈_ _≤_
+
     sup            : ∀ Carrier → Sup {e = e} Carrier
 
   ⋁ : ∀ P → Carrier
@@ -211,6 +213,7 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
             ; _≤_ = _≤_
             ; isPartialOrder = isPartialOrder
             })
+
 
   -- adjunction properties, left hom
   counit-lemmaˡ : ∀ {x y} → x * (x ⇀ y) ≤ y
