@@ -424,3 +424,18 @@ module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
     field
       isMagmaHomomorphism : Homomorphic₂ P.Carrier Q.Carrier Q._≈_ f P._*_ Q._*_
       _preserves-⋁ : ∀ {T : P.Carrier → Set (c ⊔ ℓ ⊔ e)} → f (P.⋁ T) Q.≈ Q.⋁ (λ x → Σ[ p ∈ P.Carrier ] (T p × (f p Q.≈ x)))
+
+
+module MoreProperties {c ℓ e} (Q : Quantale c ℓ e) where
+
+  open Quantale Q
+  open Properties Q
+
+  idem+rside→strict : (p : IdempotentQuantale c ℓ e) → (q : RightSidedQuantale c ℓ e) → StrictlyRightSidedQuantale c ℓ e
+  idem+rside→strict p q =
+    record { Q = Q
+           ; strictSidedʳ = λ {a} → {!   !} -- antisym {!   !} {!   !}
+           }
+
+  rsided→ab≤a : (q : RightSidedQuantale c ℓ e) → ∀ (a b : Carrier) → a * b ≤ a
+  rsided→ab≤a q a b = trans≤ (*-congˡ (⊤-max Q b)) {!   !}
