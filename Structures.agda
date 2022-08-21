@@ -158,6 +158,14 @@ module MoreProperties {c ℓ e} (Q : Quantale c ℓ e) where
   rsided→ab≤a RS a b = trans≤ (*-congˡ (⊤-max b)) RS.sidedʳ
       where module RS = IsRightSidedQuantale RS
 
+  open Exponentials
+
+  rsided→a⇀a=T : IsRightSidedQuantale Q → ∀ (a : Carrier) → Quantale._≈_ Q ((Q ⇀ a) a) ⊤
+  rsided→a⇀a=T RS a = antisym (⊤-max ((Q ⇀ a) a))
+                              (adjunctionToˡ Q RS.sidedʳ)
+    where module RS = IsRightSidedQuantale RS
+
+
 record PreservesSups {c ℓ e} {A : CompleteJSL c ℓ e} {B : CompleteJSL c ℓ e} (f : CompleteJSL.Carrier A → CompleteJSL.Carrier B) : Set (suc (c ⊔ ℓ ⊔ e)) where
   module A = CompleteJSL A
   module B = CompleteJSL B
