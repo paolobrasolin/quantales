@@ -119,9 +119,9 @@ record IsAffineQuantale {c ℓ e} (Q : Quantale c ℓ e) : Set (suc (c ⊔ ℓ �
   open BotTop Q
 
   field
-    isUntialQuantale : IsUnitalQuantale Q
+    isUnitalQuantale : IsUnitalQuantale Q
 
-  open IsUnitalQuantale isUntialQuantale public
+  open IsUnitalQuantale isUnitalQuantale public
 
   field
     affine   : i ≈ ⊤
