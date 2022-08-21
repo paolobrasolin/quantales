@@ -31,12 +31,25 @@ module Sup-Poset {c ℓ} (Carrier : Set c) (_≤_ : Rel Carrier ℓ) where
 
   open Sup public
 
+module Inf-Poset {c ℓ} (Carrier : Set c) (_≤_ : Rel Carrier ℓ) where
+
+  record Inf {e} (P : Carrier → Set (c ⊔ ℓ ⊔ e)) : (Set (suc (c ⊔ ℓ ⊔ e))) where
+
+    _isLowerBound : Carrier → Set (c ⊔ ℓ ⊔ e)
+    s isLowerBound = ∀ x → P x → s ≤ x
+
+    field
+      s      : Carrier
+      isLB   : s isLowerBound
+      isGLB  : ∀ t → t isLowerBound → t ≤ s
+
+  open Inf public
 
 record IsCompleteJSL {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ : Rel Carrier ℓ) : Set (suc (c ⊔ ℓ ⊔ e)) where
   open Sup-Poset Carrier _≤_ public
   field
     isPartialOrder : IsPartialOrder _≈_ _≤_
-    sup            : ∀ Carrier → Sup {e = e} Carrier
+    sup            : ∀ P → Sup {e = e} P
 
   ⋁ : ∀ P → Carrier
   ⋁ P = s (sup P)
@@ -83,33 +96,6 @@ record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
 
   open IsQuantale isQuantale public
 
-record CommutativeQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  field
-    Q : Quantale c ℓ e
-
-  open Quantale Q public
-
-  field
-    isCommutative : Commutative _≈_ _*_
-
-record UnitalQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  field
-    Q : Quantale c ℓ e
-
-  open Quantale Q public
-
-  field
-    i        : Carrier
-    isUnital : Identity _≈_ i _*_
-
-record IdempotentQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  field
-    Q : Quantale c ℓ e
-
-  open Quantale Q public
-
-  field
-    isIdempotent : Idempotent _≈_ _*_
 
 module Properties {c ℓ e} (Q : Quantale c ℓ e) where
 
@@ -121,21 +107,18 @@ module Properties {c ℓ e} (Q : Quantale c ℓ e) where
   _∨_ : Carrier → Carrier → Carrier
   a ∨ b = ⋁ (∨-predicate a b)
 
-  _∨ₛ_ : (a : Carrier) → (b : Carrier) → Sup (∨-predicate a b)
-  a ∨ₛ b = sup (∨-predicate a b)
-
   ≤→a∨b≈b : ∀ {a} {b}
           → a ≤ b
           → a ∨ b ≈ b
   ≤→a∨b≈b {a} {b} a≤b =
-    antisym (isLUB (a ∨ₛ b) b λ { x (lift (inj₁ a≈x)) → ≤-respˡ-≈ a≈x a≤b
+    antisym (isLUB (sup _) b λ { x (lift (inj₁ a≈x)) → ≤-respˡ-≈ a≈x a≤b
                                 ; x (lift (inj₂ b≈x)) → ≤-respˡ-≈ b≈x refl≤ })
-            (isUB (a ∨ₛ b) b (lift (inj₂ refl≈)))
+            (isUB (sup _) b (lift (inj₂ refl≈)))
 
   a∨b≈b→≤ : ∀ {a} {b}
           → a ∨ b ≈ b
           → a ≤ b
-  a∨b≈b→≤ {a} {b} a∨b≈b = ≤-respʳ-≈ a∨b≈b (isUB (a ∨ₛ b) a (lift (inj₁ refl≈)))
+  a∨b≈b→≤ {a} {b} a∨b≈b = ≤-respʳ-≈ a∨b≈b (isUB (sup _) a (lift (inj₁ refl≈)))
 
   sup-ext : ∀ {f} {g}
               → (∀ i → (f i → g i))
@@ -191,81 +174,6 @@ module Properties {c ℓ e} (Q : Quantale c ℓ e) where
                 (x ∨ y) * a                       ≈⟨ ∙-congʳ (≤→a∨b≈b x≤y) ⟩
                 y * a                             ∎
         in a∨b≈b→≤ t
-
-module BotTop {c a b} (Q : Quantale c a b) where
-
-  open Quantale Q
-  open Properties Q
-  open import Data.Empty.Polymorphic renaming (⊥ to False)
-  open import Data.Unit.Polymorphic renaming (⊤ to True)
-
-  ⊥ : Carrier
-  ⊥ = ⋁ (λ _ → False)
-
-  ⊤ : Carrier
-  ⊤ = ⋁ (λ _ → True)
-
-  ⊥-min : Minimum _≤_ ⊥
-  ⊥-min = λ x → isLUB (sup (λ _ → False)) x λ t ()
-
-  ⊤-max : Maximum _≤_ ⊤
-  ⊤-max = λ x → isUB (sup (λ _ → True)) x tt
-
-  ⊥-absorbsˡ : ∀ (x : Carrier) → x * ⊥ ≈ ⊥
-  ⊥-absorbsˡ x =
-    begin x * ⊥                         ≈⟨ distrˡ (λ _ → False) x ⟩
-          ⋁ (P-op (x *_) (λ _ → False)) ≈⟨ sup-extensionality (λ i → (λ ()) , λ ()) ⟩
-          ⊥                             ∎
-    where open import Relation.Binary.Reasoning.Setoid setoid
-
-open BotTop public
-
-record RightSidedQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  field
-    Q : Quantale c ℓ e
-
-  open Quantale Q public
-
-  field
-    sidedʳ : ∀ {a : Carrier} → a * ⊤ Q ≤ a
-
-record LeftSidedQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  field
-    Q : Quantale c ℓ e
-
-  open Quantale Q public
-
-  field
-    sidedˡ : ∀ {a : Carrier} → ⊤ Q * a ≤ a
-
-record StrictlyRightSidedQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  field
-    Q : Quantale c ℓ e
-
-  open Quantale Q public
-
-  field
-    strictSidedʳ : ∀ {a : Carrier} → a * ⊤ Q ≈ a
-
-record StrictlyLeftSidedQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  field
-    Q : Quantale c ℓ e
-
-  open Quantale Q public
-
-  field
-    strictSidedˡ : ∀ {a : Carrier} → ⊤ Q * a ≈ a
-
-record AffineQuantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
-  field
-    Q : Quantale c ℓ e
-
-  open Quantale Q public
-
-  field
-    i        : Carrier
-    isUnital : Identity _≈_ i _*_
-    affine   : i ≈ ⊤ Q
 
 module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
@@ -331,7 +239,7 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
 
   unit-lemmaˡ : ∀ {x y} → y ≤ (x ⇀ (x * y))
   unit-lemmaˡ {x} {y} =
-    begin y             ≤⟨ isUB (x ⇀ₛ (x * y)) y (lift refl≤) ⟩
+    begin y             ≤⟨ isUB (sup _) y (lift refl≤) ⟩
           (x ⇀ (x * y)) ∎
 
   adjunctionFromˡ : ∀ {x y z} → x ≤ (y ⇀ z) → y * x ≤ z
@@ -347,10 +255,10 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
           z           ∎
 
   adjunctionToˡ : {x y z : Carrier} → y * x ≤ z → x ≤ y ⇀ z
-  adjunctionToˡ {x} {y} {z} y*x≤z = isUB (y ⇀ₛ z) x (lift y*x≤z)
+  adjunctionToˡ {x} {y} {z} y*x≤z = isUB (sup _) x (lift y*x≤z)
 
   adjunctionToʳ : {x y z : Carrier} → x * y ≤ z → x ≤ (y ↼ z)
-  adjunctionToʳ {x} {y} {z} x*y≤z = isUB (y ↼ₛ z) x (lift x*y≤z)
+  adjunctionToʳ {x} {y} {z} x*y≤z = isUB (sup _) x (lift x*y≤z)
 
   -- the adjunction (x * _ ⊣ x ⇀ _) in a quantale internalizes
   int-adjunctionˡ : ∀ {x y z} → (y ⇀ (x ⇀ z)) ≈ ((x * y) ⇀ z)
@@ -373,13 +281,13 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   thm6 {a} {b} *a⇀b≈b = (a ⇀ b) , *a⇀b≈b
 
   thm6′ : ∀ {a b} → ∃[ c ] a * c ≈ b → a * (a ⇀ b) ≈ b
-  thm6′ {a} {b} (c , a*c≈b) = antisym counit-lemmaˡ (trans≤ (≤-respˡ-≈ a*c≈b refl≤) (*-congˡ (isUB (a ⇀ₛ b) c (lift (≤-respʳ-≈ a*c≈b refl≤)))))
+  thm6′ {a} {b} (c , a*c≈b) = antisym counit-lemmaˡ (trans≤ (≤-respˡ-≈ a*c≈b refl≤) (*-congˡ (isUB (sup _) c (lift (≤-respʳ-≈ a*c≈b refl≤)))))
 
   thm7 : ∀ {a b} → (a ↼ b) * a ≈ b → ∃[ c ] c * a ≈ b
   thm7 {a} {b} *a↼b≈b = (a ↼ b) , *a↼b≈b
 
   thm7′ : ∀ {a b} → ∃[ c ] c * a ≈ b → (a ↼ b) * a ≈ b
-  thm7′ {a} {b} (c , a*c≈b) = antisym counit-lemmaʳ (trans≤ (≤-respˡ-≈ a*c≈b refl≤) (*-congʳ (isUB (a ↼ₛ b) c (lift (≤-respʳ-≈ a*c≈b refl≤)))))
+  thm7′ {a} {b} (c , a*c≈b) = antisym counit-lemmaʳ (trans≤ (≤-respˡ-≈ a*c≈b refl≤) (*-congʳ (isUB (sup _) c (lift (≤-respʳ-≈ a*c≈b refl≤)))))
 
   thm8 : ∀ {a b} → a ⇀ (a * b) ≈ b → ∃[ c ] a ⇀ c ≈ b
   thm8 {a} {b} a⇀a*b≈b = (a * b) , a⇀a*b≈b
@@ -394,22 +302,22 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   thm9′ {a} {b} (c , a↼c≈b) = antisym (≤-respʳ-≈ a↼c≈b (↼-congˡ (≤-respˡ-≈ (∙-congʳ a↼c≈b) counit-lemmaʳ))) (adjunctionToʳ refl≤)
 
   lemmaʳ : ∀ {a b c} → c ⇀ a ≈ b → c ≤ b ↼ a
-  lemmaʳ {a} {b} {c} c⇀a≈b = isUB (b ↼ₛ a) c (lift (≤-respˡ-≈ (∙-congˡ c⇀a≈b) (counit-lemmaˡ {c} {a})))
+  lemmaʳ {a} {b} {c} c⇀a≈b = isUB (sup _) c (lift (≤-respˡ-≈ (∙-congˡ c⇀a≈b) (counit-lemmaˡ {c} {a})))
 
   lemmaˡ : ∀ {a b c} → c ↼ a ≈ b → c ≤ b ⇀ a
-  lemmaˡ {a} {b} {c} c↼a≈b = isUB (b ⇀ₛ a) c (lift (≤-respˡ-≈ (∙-congʳ c↼a≈b) (counit-lemmaʳ {c} {a})))
+  lemmaˡ {a} {b} {c} c↼a≈b = isUB (sup _) c (lift (≤-respˡ-≈ (∙-congʳ c↼a≈b) (counit-lemmaʳ {c} {a})))
 
   thm10 : ∀ {a b} → (b ↼ a) ⇀ a ≈ b → ∃[ c ] c ⇀ a ≈ b
   thm10 {a} {b} b↼a⇀a≈b = (b ↼ a) , b↼a⇀a≈b
 
   thm10′ : ∀ {a b} → ∃[ c ] c ⇀ a ≈ b → (b ↼ a) ⇀ a ≈ b
-  thm10′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (⇀-congʳ (lemmaʳ c⇀a≈b))) (isUB ((b ↼ a) ⇀ₛ a) b (lift counit-lemmaʳ))
+  thm10′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (⇀-congʳ (lemmaʳ c⇀a≈b))) (isUB (sup _) b (lift counit-lemmaʳ))
 
   thm11 : ∀ {a b} → (b ⇀ a) ↼ a ≈ b → ∃[ c ] c ↼ a ≈ b
   thm11 {a} {b} b⇀a↼a≈b = (b ⇀ a) , b⇀a↼a≈b
 
   thm11′ : ∀ {a b} → ∃[ c ] c ↼ a ≈ b → (b ⇀ a) ↼ a ≈ b
-  thm11′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (↼-congʳ (lemmaˡ c⇀a≈b))) (isUB ((b ⇀ a) ↼ₛ a) b (lift counit-lemmaˡ))
+  thm11′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (↼-congʳ (lemmaˡ c⇀a≈b))) (isUB (sup _) b (lift counit-lemmaˡ))
 
 
 module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
@@ -425,17 +333,28 @@ module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
       isMagmaHomomorphism : Homomorphic₂ P.Carrier Q.Carrier Q._≈_ f P._*_ Q._*_
       _preserves-⋁ : ∀ {T : P.Carrier → Set (c ⊔ ℓ ⊔ e)} → f (P.⋁ T) Q.≈ Q.⋁ (λ x → Σ[ p ∈ P.Carrier ] (T p × (f p Q.≈ x)))
 
-
-module MoreProperties {c ℓ e} (Q : Quantale c ℓ e) where
+module BotTop {c a b} (Q : Quantale c a b) where
 
   open Quantale Q
   open Properties Q
+  open import Data.Empty.Polymorphic renaming (⊥ to False)
+  open import Data.Unit.Polymorphic renaming (⊤ to True)
 
-  idem+rside→strict : (p : IdempotentQuantale c ℓ e) → (q : RightSidedQuantale c ℓ e) → StrictlyRightSidedQuantale c ℓ e
-  idem+rside→strict p q =
-    record { Q = Q
-           ; strictSidedʳ = λ {a} → {!   !} -- antisym {!   !} {!   !}
-           }
+  ⊥ : Carrier
+  ⊥ = ⋁ (λ _ → False)
 
-  rsided→ab≤a : (q : RightSidedQuantale c ℓ e) → ∀ (a b : Carrier) → a * b ≤ a
-  rsided→ab≤a q a b = trans≤ (*-congˡ (⊤-max Q b)) {!   !}
+  ⊤ : Carrier
+  ⊤ = ⋁ (λ _ → True)
+
+  ⊥-min : Minimum _≤_ ⊥
+  ⊥-min = λ x → isLUB (sup _) x λ t ()
+
+  ⊤-max : Maximum _≤_ ⊤
+  ⊤-max = λ x → isUB (sup _) x tt
+
+  ⊥-absorbsˡ : ∀ (x : Carrier) → x * ⊥ ≈ ⊥
+  ⊥-absorbsˡ x =
+    begin x * ⊥                         ≈⟨ distrˡ (λ _ → False) x ⟩
+          ⋁ (P-op (x *_) (λ _ → False)) ≈⟨ sup-extensionality (λ i → (λ ()) , λ ()) ⟩
+          ⊥                             ∎
+    where open import Relation.Binary.Reasoning.Setoid setoid
