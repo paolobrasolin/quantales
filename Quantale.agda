@@ -358,3 +358,19 @@ module BotTop {c a b} (Q : Quantale c a b) where
           ⋁ (P-op (x *_) (λ _ → False)) ≈⟨ sup-extensionality (λ i → (λ ()) , λ ()) ⟩
           ⊥                             ∎
     where open import Relation.Binary.Reasoning.Setoid setoid
+
+
+-- an example of quantale useful to construct infs : for a set I, the set of functions I → Q is a quantale
+Q^_ : {c ℓ e : Level} {Q : Quantale c ℓ e} → (I : Set (c ⊔ e)) → Quantale (c ⊔ e) _ _
+Q^_ {c} {ℓ} {e} {Q} I = record
+  { Carrier = I → Quantale.Carrier Q
+  ; _≈_ = λ f g → ∀ {i : I} → Quantale._≈_ Q (f i) (g i)
+  ; _≤_ = λ f g → ∀ {i : I} → Quantale._≤_ Q (f i) (g i)
+  ; _*_ = λ f g i → Quantale._*_ Q (f i) (g i)
+  ; isQuantale = record
+    { isCompleteJSL = {!   !}
+    ; isSemigroup = {!   !}
+    ; distrˡ = {!   !}
+    ; distrʳ = {!   !}
+    }
+  }
