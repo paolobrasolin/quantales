@@ -72,7 +72,7 @@ record IsQuantale {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ : R
     -- semigroup structures
     isSemigroup   : IsSemigroup _≈_ _*_
 
-  open IsCompleteJSL isCompleteJSL public renaming (refl to refl≤; trans to trans≤) hiding (reflexive; isEquivalence)
+  open IsCompleteJSL isCompleteJSL public renaming (refl to refl≤; trans to trans≤; reflexive to reflexive≤) hiding (isEquivalence)
   open IsSemigroup isSemigroup     public renaming (refl to refl≈; trans to trans≈)
 
   -- generic action on the elements of a predicate
@@ -361,16 +361,51 @@ module BotTop {c a b} (Q : Quantale c a b) where
 
 
 -- an example of quantale useful to construct infs : for a set I, the set of functions I → Q is a quantale
--- Q^_ : {c ℓ e : Level} {Q : Quantale c ℓ e} → (I : Set (c ⊔ e)) → Quantale (c ⊔ e) _ _
--- Q^_ {c} {ℓ} {e} {Q} I = record
---   { Carrier = I → Quantale.Carrier Q
---   ; _≈_ = λ f g → ∀ {i : I} → Quantale._≈_ Q (f i) (g i)
---   ; _≤_ = λ f g → ∀ {i : I} → Quantale._≤_ Q (f i) (g i)
---   ; _*_ = λ f g i → Quantale._*_ Q (f i) (g i)
---   ; isQuantale = record
---     { isCompleteJSL = {!   !}
---     ; isSemigroup = {!   !}
---     ; distrˡ = {!   !}
---     ; distrʳ = {!   !}
---     }
---   }
+
+module QPowerset {c ℓ e} (Q : Quantale c ℓ e) where
+
+  open Quantale Q
+  open Properties Q
+
+  Q^_ : (I : Set (c ⊔ e)) → Quantale (c ⊔ e) _ _
+  Q^_ I = record
+    { Carrier = I → Carrier
+    ; _≈_ = λ f g → ∀ {i : I} → f i ≈ g i
+    ; _≤_ = λ f g → ∀ {i : I} → f i ≤ g i
+    ; _*_ = λ f g i → f i * g i
+    ; isQuantale = record
+      { isCompleteJSL =
+        record { isPartialOrder =
+          record { isPreorder =
+            record { isEquivalence =
+              record { refl = refl≈
+                     ; sym = λ p → sym p
+                     ; trans = λ p q → trans≈ p q
+                     }
+                   ; reflexive = λ {f} {g} f≈g {i} → reflexive≤ f≈g
+                   ; trans = λ {f} {g} {h} f≤g g≤h {i} → trans≤ f≤g g≤h
+                   }
+                 ; antisym = λ {f} {g} f≤g g≤f → antisym f≤g g≤f
+                 }
+               ; sup = λ P → record
+                 { s = λ i → {!!}
+                 -- 
+                 ; isUB = λ f Pf {i} → {!!}
+                 ; isLUB = {!!}
+                 }
+               }
+      ; isSemigroup =
+        record { isMagma =
+          record { isEquivalence =
+            record { refl = refl≈
+                   ; sym = {!!} -- ???
+                   ; trans = λ {f} {g} {h} f≈g g≈h {i} → trans≈ f≈g g≈h
+                   }
+                 ; ∙-cong = λ {f} {g} {u} {v} f≈g u≈v {i} → IsSemigroup.∙-cong {!!} f≈g u≈v
+                 }
+               ; assoc = λ f g h {i} → assoc (f i) (g i) (h i)
+               }
+      ; distrˡ = {!   !}
+      ; distrʳ = {!   !}
+      }
+    }
