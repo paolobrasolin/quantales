@@ -388,24 +388,24 @@ module QPowerset {c ℓ e} (Q : Quantale c ℓ e) where
                  ; antisym = λ {f} {g} f≤g g≤f → antisym f≤g g≤f
                  }
                ; sup = λ P → record
-                 { s = λ i → {!!}
-                 -- 
-                 ; isUB = λ f Pf {i} → {!!}
-                 ; isLUB = {!!}
+                 { s = λ i → ⋁ (λ t → ∃[ f ] (P f × (t ≈ f i)))
+                 --
+                 ; isUB = λ f Pf {i} → isUB (sup (λ t → ∃[ f ] (P f × (t ≈ f i)))) (f i) (f , (Pf , refl≈))
+                 ; isLUB = λ f x {i} → isLUB (sup (λ t → ∃[ f ] (P f × (t ≈ f i)))) (f i) (λ {gi (g , Pg , gi≈) → ≤-respˡ-≈ (Eq.sym gi≈) (x g Pg)})
                  }
                }
       ; isSemigroup =
         record { isMagma =
           record { isEquivalence =
             record { refl = refl≈
-                   ; sym = {!!} -- ???
+                   ; sym = λ {f} {g} x → (λ {i} → sym x)
                    ; trans = λ {f} {g} {h} f≈g g≈h {i} → trans≈ f≈g g≈h
                    }
-                 ; ∙-cong = λ {f} {g} {u} {v} f≈g u≈v {i} → IsSemigroup.∙-cong {!!} f≈g u≈v
+                 ; ∙-cong = λ {f} {g} {u} {v} f≈g u≈v {i} → ∙-cong f≈g u≈v
                  }
                ; assoc = λ f g h {i} → assoc (f i) (g i) (h i)
                }
-      ; distrˡ = {!   !}
-      ; distrʳ = {!   !}
+      ; distrˡ = λ P x {i} → {!   !}
+      ; distrʳ = λ P x {i} → {!   !}
       }
     }
