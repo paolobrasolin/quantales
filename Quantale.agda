@@ -320,7 +320,7 @@ module Exponentials {c ℓ e} (Q : Quantale c ℓ e) where
   thm11′ {a} {b} (c , c⇀a≈b) = antisym (≤-respʳ-≈ c⇀a≈b (↼-congʳ (lemmaˡ c⇀a≈b))) (isUB (sup _) b (lift counit-lemmaˡ))
 
 
-module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
+module Homomorphisms {c ℓ e} (P : Quantale c ℓ e) (Q : Quantale (c ⊔ e) (c ⊔ ℓ ⊔ e) (c ⊔ e)) where
   open import Algebra.Morphism.Definitions
   open module P = Quantale P
   open module pP = Properties P
@@ -331,7 +331,9 @@ module Homomorphisms {c ℓ e} (P Q : Quantale c ℓ e) where
   record Supmap (f : P.Carrier → Q.Carrier) : Set (suc (c ⊔ ℓ ⊔ e)) where
     field
       isMagmaHomomorphism : Homomorphic₂ P.Carrier Q.Carrier Q._≈_ f P._*_ Q._*_
-      _preserves-⋁ : ∀ {T : P.Carrier → Set (c ⊔ ℓ ⊔ e)} → f (P.⋁ T) Q.≈ Q.⋁ (λ x → Σ[ p ∈ P.Carrier ] (T p × (f p Q.≈ x)))
+      _preserves-⋁ : ∀ {P : P.Carrier → Set (c ⊔ ℓ ⊔ e)}
+                   → {P-Cong : ∀ {a b} → a P.≈ b → P a → P b}
+                   → f (P.⋁ λ w → P w) Q.≈ Q.⋁ (λ x → Σ[ p ∈ P.Carrier ] (P p × (f p Q.≈ x)))
 
 module BotTop {c a b} (Q : Quantale c a b) where
 
@@ -378,10 +380,10 @@ module QPowerset {c ℓ e} (Q : Quantale c ℓ e) where
         record { isPartialOrder =
           record { isPreorder =
             record { isEquivalence =
-              record { refl = refl≈
-                     ; sym = λ p → sym p
-                     ; trans = λ p q → trans≈ p q
-                     }
+                     record { refl = refl≈
+                           ; sym = λ p → sym p
+                           ; trans = λ p q → trans≈ p q
+                           }
                    ; reflexive = λ {f} {g} f≈g {i} → reflexive≤ f≈g
                    ; trans = λ {f} {g} {h} f≤g g≤h {i} → trans≤ f≤g g≤h
                    }
@@ -418,23 +420,26 @@ module QPowerset {c ℓ e} (Q : Quantale c ℓ e) where
       }
     }
 
-{-
-i₁ ≈ ?0 i
-b : i₁ ≈ x i * c
-(f , pf ,  ∙-congˡ {!  cfi  !})
+module SupmapConst {c ℓ e} (Q : Quantale c ℓ e) (I : Set (c ⊔ e)) where
 
-      ⋁
-       (λ t →
-          Σ (I → Carrier)
-          (λ f →
-             Σ (Σ (I → Carrier) (λ p → Σ (P p) ({i} → f i ≈ x i * p i)))
-               (t ≈ f i)))
+  module Q = Quantale Q
+  open Q
+  open Properties Q
+  open QPowerset Q
 
-      ⋁
-       (λ t →
-          Σ Carrier
-          (λ p →
-             Σ (Σ (I → Carrier) (λ f → Σ (P f) (p ≈ f i)))
-               (t ≈ x i * p)))
+  module Q^I = Quantale (Q^ I)
 
--}
+  const : Q.Carrier → Q^I.Carrier
+  const q _ = q
+
+  open Homomorphisms Q (Q^ I)
+
+  isSupmap : Supmap const
+  isSupmap =
+    record
+      { isMagmaHomomorphism = λ _ _ → refl≈
+      ; _preserves-⋁ = λ { {P-Cong = P-Cong} →
+        sup-extensionality λ i →
+           (λ x → (λ _ → i) , (lift ((i , x , λ {r} → refl≈) , refl≈)))
+         , (λ { (f , lift ((p , tp , pfi) , b)) → P-Cong (trans≈ pfi (sym b)) tp }) }
+      }
