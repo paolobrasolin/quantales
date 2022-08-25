@@ -388,10 +388,10 @@ module QPowerset {c ℓ e} (Q : Quantale c ℓ e) where
                  ; antisym = λ {f} {g} f≤g g≤f → antisym f≤g g≤f
                  }
                ; sup = λ P → record
-                 { s = λ i → ⋁ (λ t → ∃[ f ] (P f × (t ≈ f i)))
+                 { s = λ i → ⋁ (λ t → ∃[ f ] (Level.Lift (c ⊔ e) (P f × (t ≈ f i))))
                  --
-                 ; isUB = λ f Pf {i} → isUB (sup (λ t → ∃[ f ] (P f × (t ≈ f i)))) (f i) (f , (Pf , refl≈))
-                 ; isLUB = λ f x {i} → isLUB (sup (λ t → ∃[ f ] (P f × (t ≈ f i)))) (f i) (λ {gi (g , Pg , gi≈) → ≤-respˡ-≈ (Eq.sym gi≈) (x g Pg)})
+                 ; isUB = λ f Pf {i} → isUB (sup _) (f i) (f , lift (Pf , refl≈))
+                 ; isLUB = λ f x {i} → isLUB (sup _) (f i) (λ {gi (g , lift (Pg , gi≈)) → ≤-respˡ-≈ (Eq.sym gi≈) (x g Pg)})
                  }
                }
       ; isSemigroup =
@@ -405,7 +405,36 @@ module QPowerset {c ℓ e} (Q : Quantale c ℓ e) where
                  }
                ; assoc = λ f g h {i} → assoc (f i) (g i) (h i)
                }
-      ; distrˡ = λ P x {i} → {!   !}
-      ; distrʳ = λ P x {i} → {!   !}
+      ; distrˡ = λ P x {i} →
+        trans≈ (distrˡ _ (x i))
+               (sup-extensionality λ i₁ →
+                 (λ { (c , (f , lift (pf , cfi)) , b) → (λ i → x i * f i) , lift ((f , pf , refl≈) , trans≈ b (∙-congˡ cfi)) })
+                 , λ { (f , lift ((f′ , pp , r) , snd)) → f′ i , (f′ , lift (pp , refl≈)) , trans≈ snd r })
+      ; distrʳ = λ P x {i} →
+        trans≈ (distrʳ _ (x i))
+               (sup-extensionality λ i₁ →
+                 (λ { (c , (f , lift (pf , cfi)) , b) → (λ i → f i * x i) , lift ((f , pf , refl≈) , trans≈ b (∙-congʳ cfi)) })
+                 , λ { (f , lift ((f′ , pp , r) , snd)) → f′ i , (f′ , lift (pp , refl≈)) , trans≈ snd r })
       }
     }
+
+{-
+i₁ ≈ ?0 i
+b : i₁ ≈ x i * c
+(f , pf ,  ∙-congˡ {!  cfi  !})
+
+      ⋁
+       (λ t →
+          Σ (I → Carrier)
+          (λ f →
+             Σ (Σ (I → Carrier) (λ p → Σ (P p) ({i} → f i ≈ x i * p i)))
+               (t ≈ f i)))
+
+      ⋁
+       (λ t →
+          Σ Carrier
+          (λ p →
+             Σ (Σ (I → Carrier) (λ f → Σ (P f) (p ≈ f i)))
+               (t ≈ x i * p)))
+
+-}
