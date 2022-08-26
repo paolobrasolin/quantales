@@ -83,6 +83,10 @@ record IsQuantale {c ℓ e} {Carrier : Set c} (_≈_ : Rel Carrier e) (_≤_ : R
     distrˡ        : ∀ P x → (x * (⋁ P)) ≈ (⋁ (P-op (x *_) P))
     distrʳ        : ∀ P x → ((⋁ P) * x) ≈ (⋁ (P-op (_* x) P))
 
+  P-Cong : ∀ {a b} → (P : Carrier → Set (c ⊔ ℓ ⊔ e)) → a ≈ b → P a → P b
+  P-Cong P a≈b Pa = {!  !}
+
+
 record Quantale c ℓ e : Set (suc (c ⊔ ℓ ⊔ e)) where
   infix 4 _≈_ _≤_
   infix 5 _*_
@@ -332,7 +336,6 @@ module Homomorphisms {c ℓ e} (P : Quantale c ℓ e) (Q : Quantale (c ⊔ e) (c
     field
       isMagmaHomomorphism : Homomorphic₂ P.Carrier Q.Carrier Q._≈_ f P._*_ Q._*_
       _preserves-⋁ : ∀ {P : P.Carrier → Set (c ⊔ ℓ ⊔ e)}
-                   → {P-Cong : ∀ {a b} → a P.≈ b → P a → P b}
                    → f (P.⋁ λ w → P w) Q.≈ Q.⋁ (λ x → Σ[ p ∈ P.Carrier ] (P p × (f p Q.≈ x)))
 
 module BotTop {c a b} (Q : Quantale c a b) where
@@ -438,8 +441,7 @@ module SupmapConst {c ℓ e} (Q : Quantale c ℓ e) (I : Set (c ⊔ e)) where
   isSupmap =
     record
       { isMagmaHomomorphism = λ _ _ → refl≈
-      ; _preserves-⋁ = λ { {P-Cong = P-Cong} →
-        sup-extensionality λ i →
-           (λ x → (λ _ → i) , (lift ((i , x , λ {r} → refl≈) , refl≈)))
-         , (λ { (f , lift ((p , tp , pfi) , b)) → P-Cong (trans≈ pfi (sym b)) tp }) }
+      ; _preserves-⋁ = sup-extensionality (λ i →
+            (λ x → (λ _ → i) , (lift ((i , x , λ {r} → refl≈) , refl≈)))
+          , λ { (fst , lift ((p , tp , pfi) , b)) → P-Cong P ((trans≈ pfi (sym b))) tp })
       }
