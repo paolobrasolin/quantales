@@ -1,4 +1,4 @@
-{-# OPTIONS --without-K #-}
+{-# OPTIONS --without-K --allow-unsolved-metas #-}
 
 module Structures where
 
@@ -200,3 +200,7 @@ aft {c} {ℓ} {e} A B f ps M =
     } where module A = CompleteJSL A
             module B = CompleteJSL B
             module PS = PreservesSups ps
+
+
+infs : Ragg Quantale.SupmapConst.const
+infs = ?

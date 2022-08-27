@@ -1,4 +1,4 @@
-{-# OPTIONS --without-K #-}
+{-# OPTIONS --without-K --allow-unsolved-metas #-}
 
 module Quantale where
 
@@ -443,5 +443,8 @@ module SupmapConst {c ℓ e} (Q : Quantale c ℓ e) (I : Set (c ⊔ e)) where
       { isMagmaHomomorphism = λ _ _ → refl≈
       ; _preserves-⋁ = sup-extensionality (λ i →
             (λ x → (λ _ → i) , (lift ((i , x , λ {r} → refl≈) , refl≈)))
-          , λ { (fst , lift ((p , tp , pfi) , b)) → P-Cong P ((trans≈ pfi (sym b))) tp })
+          , λ { (fst , lift ((p , tp , pfi) , b)) → P-Cong {!   !} ((trans≈ pfi (sym b))) tp })
       }
+
+
+open SupmapConst
